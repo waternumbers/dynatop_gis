@@ -5,15 +5,17 @@
 \title{Function for assisting in the conversion of object to be suitable channel inputs to a dynatopGIS object}
 \usage{
 convert_channel(
-  vect_object,
+  chn,
   property_names = c(name = "DRN_ID", length = "length", startNode = "startNode", endNode
     = "endNode", width = "width", slope = "slope"),
   default_width = 2,
-  default_slope = 0.001
+  default_slope = 0.001,
+  simplify_length = 0,
+  wb = NULL
 )
 }
 \arguments{
-\item{vect_object}{a SpatVect object or a file which can read by terra::vect to create one}
+\item{chn}{a SpatVect object or a file which can read by terra::vect to create one}
 
 \item{property_names}{a named vector of containing the columns of existing data properties required in the final SpatialPolygonsDataFrame}
 
@@ -22,7 +24,7 @@ convert_channel(
 \item{default_slope}{the slope in m/m to be used when none is provided}
 }
 \description{
-Converts SpatialLinesDataFrame or SpatialPolygonsDataFrame to the correct format of SpatialPolygonsDataFrame for dynatopGIS.
+Converts SpatVect of the channel network into SpatVect containing polgons suitable for dynatopGIS, optionally adding in water bodies and simplifying.
 }
 \details{
 If the property_names vector contains a width this is used for buffering lines to produce polygons, otherwise the default_width value is used.

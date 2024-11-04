@@ -1,3 +1,10 @@
+# dynatopGIS 0.3.0.1011
+
+- Output models in the format of v0.3 of `dynatop`
+- Adjust workflow to take catchment map outline as initial input
+- Adjust convert_channel to allow for merging of waterbodies and network simplification
+
+
 # dynatopGIS 0.2.4
 
 - Switch (with suboptimal code) to `terra` package over `raster` to fix
