@@ -19,13 +19,13 @@
 #' property_names <- c(name="identifier",endNode="endNode",startNode="startNode",length="length")
 #' chn <- convert_channel(vect_lines,property_names)
 #' @export
-convert_channel <- function(chn,property_names=c(name = "DRN_ID",
+convert_channel <- function(chn,property_names=c(name = "name",
                                                  length = "length",
                                                  startNode = "startNode",
                                                  endNode = "endNode",
                                                  width = "width",
                                                  slope = "slope",
-                                                 bankfull_vol = "volume"),
+                                                 channelVol = "channelVol"),
                             default_width = 2, default_slope = 0.001, default_depth = 1,
                             simplify_length = 0,
                             wb = NULL){
@@ -93,13 +93,13 @@ convert_channel <- function(chn,property_names=c(name = "DRN_ID",
         }
     }
 
-    if(!("bankfull_vol" %in% names(chn))){
+    if(!("channelVol" %in% names(chn))){
         warning("Adding default bankfull volume")
-        chn$bankfull_vol <- chn$area*default_depth
+        chn$channelVol <- chn$area*default_depth
     }else{
-        if(any(is.na(chn$bankfull_vol))){
+        if(any(is.na(chn$channelVol))){
                 warning("Replacing missing bankfull volume with the default value")
-                chn$bankfull_vol[is.na(chn$bankfull_vol)] <- chn$area[is.na(chn$bankfull_vol)] * default_depth
+                chn$channelVol[is.na(chn$channelVol)] <- chn$area[is.na(chn$channelVol)] * default_depth
         }
     }
 
@@ -108,7 +108,7 @@ convert_channel <- function(chn,property_names=c(name = "DRN_ID",
     chn$startNode <- as.character(chn$startNode)
     chn$endNode <- as.character(chn$endNode)
     chn$length <- as.numeric(chn$length)
-    if(!all(is.finite(c(chn$length,chn$width,chn$area,chn$bankfull_vol))) ){
+    if(!all(is.finite(c(chn$length,chn$width,chn$area,chn$channelVol))) ){
         stop("Some non-finite values of channel lengths, widths, areas or volumes found!")
     }
 
@@ -137,7 +137,7 @@ convert_channel <- function(chn,property_names=c(name = "DRN_ID",
         wb$slope <- 1e-8 ## default slope
         wb$startNode <- paste0("wb_",1:nrow(wb),"_start")
         wb$endNode <- paste0("wb_",1:nrow(wb),"_end")
-        wb$bankfull_vol <-  wb$area * default_depth
+        wb$channelVol <-  wb$area * default_depth
         wb$is_wb <- TRUE
         chn$is_wb <- FALSE
 
@@ -167,59 +167,145 @@ convert_channel <- function(chn,property_names=c(name = "DRN_ID",
 
     ## ############################################################
     ## simplify the channel network
-    idx <- chn$length < simplify_length
-    if(any(idx)){ message("Simplifying network") }
-    sN <- chn$startNode
-    eN <- chn$endNode
-    iidx <- which(idx)
-    iidx <- iidx[order(chn$length[iidx])]
-    print(length(iidx))
-    cnt <- 0
-    chn_df <- as.data.frame(chn)
-    chn[, names(chn)] <- NULL ## reduce channel to just genometries
+    if( any(chn$length < simplify_length) ){
+        message("Simplifying network")
+        gm <- chn
+        gm[] <- NULL
+        gm <- split(gm,1:nrow(gm))
+        chn <- as.data.frame(chn)
+        to_keep <- rep(TRUE,nrow(chn))
         
-    for(ii in iidx){
-        if( chn_df$length[ii] >= simplify_length ){ next }
-        jj <- which( sN == eN[ii] ) ## flows out from end node
-        if( length(jj) == 1 ){ ## can merge d/s since only one outflow
-                                        #print(paste(ii,jj))
-            ##browser()
-            ##chn[[jj]] <- c( chn[[jj]], chn[[ii]])
-            chn_df$length[jj] <- chn_df$length[jj] + chn_df$length[ii]
-            chn_df$area[jj] <- chn_df$area[jj] + chn_df$area[ii]
-            chn_df$width[jj] <- chn_df$area[jj] / chn_df$length[jj]
-            chn_df$bankfull_vol[jj] <- chn_df$bankfull_vol[jj] + chn_df$bankfull_vol[ii]
-            eN[eN==sN[jj]] <- sN[ii]
-            sN[jj] <- sN[ii]
-        }else{
-            if( sum(sN == sN[ii])==1 ){ ## start node is not bifurcation so merge u/s
-                jj <- which( eN==sN[ii] ) ## those terminating at start Node
-                if( length(jj) > 0 ){
-                    ## if length(jj)==0 there is no upstream so just remove
-                    eN[jj] <- eN[ii]
-                    jj <- jj[which.max(chn_df$length[jj])] ## merge into longest reach
-                    #print(paste(ii,jj))
-                                        #chn_df[jj,] <- terra::combineGeoms(chn_df[jj,],chn_df[ii,])
-                    ##chn[[jj]] <- c( chn[[jj]], chn[[ii]])
-                    chn_df$length[jj] <- chn_df$length[jj] + chn_df$length[ii]
-                    chn_df$area[jj] <- chn_df$area[jj] + chn_df$area[ii]
-                    chn_df$bankfull_vol[jj] <- chn_df$bankfull_vol[jj] + chn_df$bankfull_vol[ii]
-                    chn_df$width[jj] <- chn_df$area[jj] / chn_df$length[jj]
-                }
-            }else{
-                ## drop it
-                #eN[ eN == sN[ii] ] <- eN[ii]
-                #warning(paste("unable to merge", chn_df$name[ii], "with length", chn_df$length[ii]))
-                idx[ii] <- FALSE
-            }
-        }
-        cnt <- cnt + 1
-        if( cnt/100 == cnt%/%100 ){ print(paste(cnt,"of",length(iidx))) }
-    }
-    ##    Reduce(combineGeoms,c(tmp[1,],tmp[2,],tmp[5,]))
-    browser()
-    chn <- cbind(chn,chn_df)
-    chn <- chn[!idx,]
+        ## find channels to merge and order
+        idx <- which( chn$length < simplify_length )
+        idx <- idx[order(chn$length[idx])]
 
+        cnt <- 0
+        n <- length(idx)
+        print(paste("Evaluating",n,"potential candidates"))
+        pb <- txtProgressBar(min = 0, max = n, initial = 0, char = "=",
+                             width = NA, "progress...", "whoop", style = 3, file = "")
+        for(ii in idx){
+
+            cnt <- cnt+1
+            setTxtProgressBar(pb, cnt, title = NULL, label = NULL)
+            
+            if( chn$length[ii] >= simplify_length ){ next } ## catch incase a merge has already made it long
+            
+            in_hn <-  which( chn$endNode == chn$startNode[ii] )
+            out_hn <-  which( chn$startNode == chn$startNode[ii] )
+            in_en <- which( chn$endNode == chn$endNode[ii] )
+            out_en <- which( chn$startNode == chn$endNode[ii] )
+            jj <- NA
+            if( length(in_en)==1 &
+                length(out_en)==1 ){
+                ## endNode is a 1-to-1 join and can merge d/s
+                jj <- out_en
+                chn$startNode[jj] <- chn$startNode[ii]
+            }
+            if( length(in_hn)==1 &
+                length(out_hn)==1 &
+                is.na(jj) ){
+                ## startNode is a 1-to-1 join and can merge u/s
+                jj <- in_hn
+                chn$endNode[jj] <- chn$endNode[ii]
+            }
+            if( length(out_en)==1 &
+                is.na(jj) ){
+                ## endNode is a single outlet so merge d/s but reroute other flows to endNode
+                jj <- out_en
+                chn$endNode[ chn$endNode==chn$startNode[jj] ] <- chn$startNode[ii]
+                chn$startNode[jj] <- chn$startNode[ii]
+            }
+            
+            if(is.na(jj)){ next } ## can't simplify
+
+            ##print(paste(cnt,ii,jj))
+            
+            ## merge properties (default to those for jj)
+            chn$length[jj] <- chn$length[jj] + chn$length[ii]
+            chn$area[jj] <- chn$area[jj] + chn$area[ii]
+            chn$width[jj] <- chn$area[jj] / chn$length[jj]
+            chn$channelVol[jj] <- chn$channelVol[jj] + chn$channelVol[ii]
+            ## chn[ii,] <- NA # usefull for debugging...
+
+            ## merge geom
+            gm[[jj]] <- combineGeoms( gm[[jj]], gm[[ii]], minover=0 )
+            to_keep[ii] <- FALSE
+            
+ 
+            
+        }
+        close(pb)
+        ## merge back into data.frame
+        chn <- cbind(terra::vect(gm[to_keep]),chn[to_keep,])
+    }
+    
     return(chn)
 }
+
+
+
+    ## if( any(chn$length < simplify_length) ){
+    ##     message("Simplifying network")
+    ##     gm <- terra::geom(chn) ## geom as a matrix to relabel
+    ##     gnm <- colnames(gm)
+    ##     ggm <- lapply(split(gm,gm[,'geom']),matrix,ncol=ncol(gm),col.names=gnm)
+        
+    ##     gm <- as.data.frame(gm) ## to make splitting easier
+        
+    ##     npart <- tapply(gm[,"part"],gm[,"geom"],max)
+    ##     chn <- as.data.frame(chn) ## drop geom data
+
+    ##     ## find channels to merge and order
+    ##     idx <- which( chn$length < simplify_length )
+    ##     idx <- idx[order(chn$length[idx])]
+
+    ##     cnt <- 0
+    ##     n <- length(idx)
+    ##     print(paste("Evaluating",n,"potential candidates"))
+    ##     for(ii in idx[1:10]){
+    ##         if( chn$length[ii] >= simplify_length ){ next } ## catch incase a merge has already made it long
+            
+    ##         in_hn <-  which( chn$endNode == chn$startNode[ii] )
+    ##         out_hn <-  which( chn$startNode == chn$startNode[ii] )
+    ##         in_en <- which( chn$endNode == chn$endNode[ii] )
+    ##         out_en <- which( chn$startNode == chn$endNode[ii] )
+    ##         jj <- NA
+    ##         if( length(in_en)==1 &
+    ##             length(out_en)==1 ){
+    ##             ## endNode is a 1-to-1 join and can merge d/s
+    ##             jj <- out_en
+    ##             chn$startNode[jj] <- chn$startNode[ii]
+    ##         }
+    ##         if( length(in_hn)==1 &
+    ##             length(out_hn)==1 &
+    ##             is.na(jj) ){
+    ##             ## startNode is a 1-to-1 join and can merge u/s
+    ##             jj <- in_hn
+    ##             chn$endNode[jj] <- chn$endNode[ii]
+    ##         }
+    ##         if(is.na(jj)){ next } ## can't simplify
+            
+    ##         ## merge properties (default to those for jj)
+    ##         chn$length[jj] <- chn$length[jj] + chn$length[ii]
+    ##         chn$area[jj] <- chn$area[jj] + chn$area[ii]
+    ##         chn$width[jj] <- chn$area[jj] / chn$length[jj]
+    ##         chn$channelVol[jj] <- chn$channelVol[jj] + chn$channelVol[ii]
+    ##         chn[ii,] <- NA
+
+    ##         ## merge geom
+    ##         kk <- npart[jj] + 1
+    ##         kdx <-  gm[,"geom"]==ii
+    ##         gm[kdx,"part"] <- kk
+    ##         gm[kdx,"geom"] <- jj
+    ##         npart[jj] <- kk
+            
+    ##         cnt <- cnt+1
+    ##         #print(cnt)
+    ##     }
+        
+    ##     ## merge back into data.frame
+    ##     browser()
+    ##     idx <- sort(unique(gm[,"geom"]))
+    ##     gm[,"geom"] <- match(gm[,"geom"],idx)
+    ##     chn <- terra::vect(gm,"polygons",atts=chn[idx,])
