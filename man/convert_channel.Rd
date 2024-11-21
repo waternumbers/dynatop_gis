@@ -6,12 +6,11 @@
 \usage{
 convert_channel(
   chn,
-  property_names = c(name = "DRN_ID", length = "length", startNode = "startNode", endNode
-    = "endNode", width = "width", slope = "slope"),
-  default_width = 2,
-  default_slope = 0.001,
-  simplify_length = 0,
-  wb = NULL
+  property_names = c(name = "name", length = "length", area = "area", startNode =
+    "startNode", endNode = "endNode", width = "width", slope = "slope", channelVol =
+    "channelVol"),
+  defaults = c(width = 2, slope = 0.001, depth = 1),
+  drop = TRUE
 )
 }
 \arguments{
@@ -22,12 +21,35 @@ convert_channel(
 \item{default_width}{the width in m to be used for buffering lines to produce polygons}
 
 \item{default_slope}{the slope in m/m to be used when none is provided}
+
+\item{default_depth}{used to compute bankfull volume is none provided}
+
+\item{simplify_length}{channel reachs shorter then this will be merged.}
+
+\item{wb}{a SpatVect containing waterbody polygons a or file which can read by terra::vect to create one}
+}
+\value{
+A SpatVect containing polygons of the channel network, with at least the following properties: name, length, area, width, slope, startNode, endNode and channelVol.
 }
 \description{
-Converts SpatVect of the channel network into SpatVect containing polgons suitable for dynatopGIS, optionally adding in water bodies and simplifying.
+Converts SpatVect of the channel network into SpatVect containing polgons suitable for dynatopGIS
 }
 \details{
-If the property_names vector contains a width this is used for buffering lines to produce polygons, otherwise the default_width value is used.
+The processing follows the follwoing sequence:
+  - The `property_names` input is used to rename the data associated with spatial objects. Existing variables may be deleted or overwritten if names clash.
+  - Varaibles are converted to the expected type then checked for missing values; in doing this
+      - Missing `slope` values are populated by the default
+      - Missing `startNode` values are replaced by `sn_<name>`
+      - Missing `endNode` values are replaced by `en_<name>`
+  - If the spatial objects are polygons
+     - Missing `area` values are computed from the polygons
+     - Missing `width` values are populated by `area` / `length`
+  - else if the spatial objects are lines
+     - Missing `width` values are filled with the default values
+     - The spatial objects are buffered to give the correct `width`
+     - Missing `area` values are computed from the polygons
+  - Missing `channelVol` values are populated by the `area` multiplied by the default depth.
+  - if `drop=TRUE` all columns except those required are dropped
 }
 \examples{
 channel_file <- system.file("extdata", "SwindaleRiverNetwork.shp",

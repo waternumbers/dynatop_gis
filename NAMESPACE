@@ -2,6 +2,11 @@
 
 export(convert_channel)
 export(dynatopGIS)
+export(fill_na)
+export(locate_gauges)
+export(merge_channels)
+export(simplify_channel)
+export(trim_channel)
 importFrom(R6,R6Class)
 importFrom(jsonlite,fromJSON)
 importFrom(jsonlite,toJSON)

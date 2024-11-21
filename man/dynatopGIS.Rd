@@ -69,6 +69,7 @@ unlink(demo_dir)
 \item \href{#method-dynatopGIS-classify}{\code{dynatopGIS$classify()}}
 \item \href{#method-dynatopGIS-combine_classes}{\code{dynatopGIS$combine_classes()}}
 \item \href{#method-dynatopGIS-create_model}{\code{dynatopGIS$create_model()}}
+\item \href{#method-dynatopGIS-locate_gauges}{\code{dynatopGIS$locate_gauges()}}
 \item \href{#method-dynatopGIS-get_version}{\code{dynatopGIS$get_version()}}
 \item \href{#method-dynatopGIS-get_method}{\code{dynatopGIS$get_method()}}
 \item \href{#method-dynatopGIS-clone}{\code{dynatopGIS$clone()}}
@@ -453,6 +454,25 @@ Setting the sf_opt and sz_opt options ensures the model is set up with the corre
 The \code{rain_layer} (\code{pet_layer}) can contain the numeric id values of different rainfall (pet) series. If the value of \code{rain_layer} (\code{pet_layer}) is not \code{NULL} the weights used to compute an averaged input value for each HRU are computed, otherwise an input table for the models generated with the value "missing" used in place of the series name.
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-dynatopGIS-locate_gauges"></a>}}
+\if{latex}{\out{\hypertarget{method-dynatopGIS-locate_gauges}{}}}
+\subsection{Method \code{locate_gauges()}}{
+locate gauges on the channel newtork
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{dynatopGIS$locate_gauges(gauge_map, gauge_name = "name")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{gauge_map}}{a SpatVect defining the gauge locations}
+
+\item{\code{gauge_name}}{feild in SpatVect containing the name of the gauge}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-dynatopGIS-get_version"></a>}}
