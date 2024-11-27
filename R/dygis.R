@@ -1091,11 +1091,7 @@ dynatopGIS <- R6::R6Class(
                 stop("No json file giving basis of the classifications")
             }
             json <- jsonlite::fromJSON(jsonFile)
-            ## if( !(json$type=="combination") ){
-            ##     stop("Model layer id not a combinations")
-            ## }
             json <- json$groups
-            ## if( !("band" %in% names(json)) ){ stop("Model layer should be a combination with the band") }
 
             if(verbose){ cat("Loading layers","\n") }
             M <- list()
@@ -1172,9 +1168,6 @@ dynatopGIS <- R6::R6Class(
             idx <- match(hru_map,tmp)
             hru_map[] <- id[idx]
             hru_map <- pmin( M[["channel"]], hru_map, na.rm=TRUE )
-            ## add id to the json data table
-##            cls <- tapply(M[[class_lyr]],hru_map,max)
-##            idx <- match( json[[class_lyr]], tmp)
             
             n_hru <- max(id) ## larget hru id number
             
@@ -1248,7 +1241,7 @@ dynatopGIS <- R6::R6Class(
 
                 jj <- hru_map[ii] ## current hru
                 hru[[jj]]$id <- jj
-                hru[[jj]]$class <- M[[class_lyr]][ii]
+                hru[[jj]]$class <- as.list(json[json[[class_lyr]]== M[[class_lyr]][ii],,drop=FALSE])
 
                 
                 ## work out flow routing
@@ -1291,14 +1284,12 @@ dynatopGIS <- R6::R6Class(
             for(jj in (n_channel+1):n_hru){
                 hru[[jj]]$properties["gradient"] <- hru[[jj]]$properties["gradient"] / hru[[jj]]$properties["area"]
                 hru[[jj]]$properties["area"] <- hru[[jj]]$properties["area"] * cell_area
-                hru[[jj]]$properties["length"] <- hru[[jj]]$properties["area"] / hru[[jj]]$properties["width"]
+                hru[[jj]]$properties["Dx"] <- hru[[jj]]$properties["area"] / hru[[jj]]$properties["width"]
                 if( length(hru[[jj]]$sf_flow_direction)==0 ){
                     stop("Hillslope HRU with no outflow")
                 }
                 hru[[jj]]$sf_flow_direction <- hru[[jj]]$sf_flow_direction / sum(hru[[jj]]$sf_flow_direction)
                 kk <- hru[[jj]]$class
-                hru[[jj]]$class <- as.list( json[json[[class_lyr]]==kk,] )
-##                hru[[jj]]$class$id <- NULL
             }
                 
             ## ############################################
@@ -1312,11 +1303,7 @@ dynatopGIS <- R6::R6Class(
                 hru[[ii]]$sf_flow_direction <- list(
                     id = as.integer( as.integer(names(hru[[ii]]$sf_flow_direction)) - 1 ), # since 0 indexed in dynatop
                     fraction = as.numeric( hru[[ii]]$sf_flow_direction ))
-                if( ii > n_channel ){
-                    hru[[ii]]$sz_flow_direction <- hru[[ii]]$sf_flow_direction
-                }else{
-                    hru[[ii]]$sz_flow_direction <- list(id = integer(0),fraction=numeric(0))
-                }
+                hru[[ii]]$sz_flow_direction <- hru[[ii]]$sf_flow_direction
             }
             hru_map[] <- as.integer(hru_map-1)
             outlets$id <- as.integer( outlets$id - 1 )
