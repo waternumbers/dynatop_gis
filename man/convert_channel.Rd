@@ -18,15 +18,9 @@ convert_channel(
 
 \item{property_names}{a named vector of containing the columns of existing data properties required in the final SpatialPolygonsDataFrame}
 
-\item{default_width}{the width in m to be used for buffering lines to produce polygons}
+\item{defaults}{default values used to replace missing widths, slopes and depths}
 
-\item{default_slope}{the slope in m/m to be used when none is provided}
-
-\item{default_depth}{used to compute bankfull volume is none provided}
-
-\item{simplify_length}{channel reachs shorter then this will be merged.}
-
-\item{wb}{a SpatVect containing waterbody polygons a or file which can read by terra::vect to create one}
+\item{drop}{logical, should non-required proerties be dropped}
 }
 \value{
 A SpatVect containing polygons of the channel network, with at least the following properties: name, length, area, width, slope, startNode, endNode and channelVol.

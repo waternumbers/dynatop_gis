@@ -154,7 +154,7 @@ to be use for the properties. If we want to carry over the identifier as the nam
 `convert_channel` with as follows:
 
 ```{r, channel_properties}
-property_names <- c(name="name1",
+property_names <- c(name="identifier",
                     endNode="endNode",
                     startNode="startNode",
                     length="length")

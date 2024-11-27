@@ -14,20 +14,21 @@
 #' @export
 fill_na <- function(rst,ctch,layer_name = names(rst)){
     
-    if(!("SpatRaster" %in% class(rst))){ layer <- terra::rast(as.character(rst)) }
+    if(!("SpatRaster" %in% class(rst))){ rst <- terra::rast(as.character(rst)) }
     if(!("SpatRaster" %in% class(rst))){ stop("rst is not a SpatRaster") }
-    if(!("SpatRaster" %in% class(ctch))){ layer <- terra::rast(as.character(ctch)) }
+    if(!("SpatRaster" %in% class(ctch))){ ctch <- terra::rast(as.character(ctch)) }
     if(!("SpatRaster" %in% class(ctch))){ stop("ctch is not a SpatRaster") }
     if( !all(layer_name %in% terra::names(rst)) ){ stop("layer_names are not found") }
 
-    for(ii in layer_name){
-        if( global(is.na(rst[[ii]]) & !is.na(ctch),max)>0 ){
-            while( global(is.na(rst[[ii]]) & !is.na(ctch),max)>0 ){ ## if there is a big mismatch this is slow and b
-                rst[[ii]] <- focal(rst[[ii]], w=3, fun="modal",na.rm=TRUE, na.policy="only",expand=TRUE)
+    idx <- which(names(rst) %in% layer_name) ## since we can;t replace by name !?!
+    for(ii in idx){ #layer_name){
+        if( terra::global(is.na(rst[[ii]]) & !is.na(ctch),max)>0 ){
+            while( terra::global(is.na(rst[[ii]]) & !is.na(ctch),max)>0 ){ ## if there is a big mismatch this is slow and b
+                rst[[ii]] <- terra::focal(rst[[ii]], w=3, fun="modal",na.rm=TRUE, na.policy="only",expand=TRUE)
             }
         }
     }
-    rst <- mask(rst,ctch)
+    rst <- terra::mask(rst,ctch)
     return(rst)
 }
  

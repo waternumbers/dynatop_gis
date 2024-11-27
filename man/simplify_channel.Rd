@@ -15,9 +15,13 @@ simplify_channel(
 \arguments{
 \item{chn}{the channel object}
 
+\item{simplify_length}{minimum length of channel sections to remove}
+
+\item{outlets}{specify outlet reaches to check the simplified channel on exit}
+
 \item{strict_routing}{see details}
 
-\item{simplify_lengh}{minimum length of channel sections to remove}
+\item{verbose}{print a higher level of output}
 }
 \description{
 Simplify a channel object by merging spatial objects

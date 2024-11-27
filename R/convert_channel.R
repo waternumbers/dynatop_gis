@@ -9,11 +9,8 @@
 #' @description Converts SpatVect of the channel network into SpatVect containing polgons suitable for dynatopGIS
 #' @param chn a SpatVect object or a file which can read by terra::vect to create one
 #' @param property_names a named vector of containing the columns of existing data properties required in the final SpatialPolygonsDataFrame
-#' @param default_width the width in m to be used for buffering lines to produce polygons
-#' @param default_slope the slope in m/m to be used when none is provided
-#' @param default_depth used to compute bankfull volume is none provided
-#' @param simplify_length channel reachs shorter then this will be merged.
-#' @param wb a SpatVect containing waterbody polygons a or file which can read by terra::vect to create one
+#' @param defaults default values used to replace missing widths, slopes and depths
+#' @param drop logical, should non-required proerties be dropped
 #'
 #' @return A SpatVect containing polygons of the channel network, with at least the following properties: name, length, area, width, slope, startNode, endNode and channelVol.
 #' 
@@ -299,8 +296,10 @@ merge_channels <- function(x,y,outlets=NULL,verbose=FALSE){
 #' @description Simplify a channel object by merging spatial objects
 #'
 #' @param chn the channel object
-#' @param simplify_lengh minimum length of channel sections to remove
+#' @param simplify_length minimum length of channel sections to remove
+#' @param outlets specify outlet reaches to check the simplified channel on exit
 #' @param strict_routing see details
+#' @param verbose print a higher level of output
 #'
 #' @details strict_routing will maintain the flow pathways by only removing nodes with a single input and output, otherwise the routing may alter the effective flow lengths.
 #' The is_wb feild in the data is used to flag objects that shouldn't be merged..
@@ -318,7 +317,7 @@ simplify_channel <- function(chn, simplify_length=100, outlets=NULL, strict_rout
 
     ## split geom and data - seems quicker...
     gm <- chn
-    values(gm) <- NULL
+    terra::values(gm) <- NULL
     gm <- split(gm,1:nrow(gm))
     chn <- as.data.frame(chn)
 
@@ -417,7 +416,7 @@ simplify_channel <- function(chn, simplify_length=100, outlets=NULL, strict_rout
                 chn$endNode[ii] <- chn$startNode[ii] <- NA # to stop matching on deleted segments
                 
                 ## merge geom
-                gm[[jj]] <- combineGeoms( gm[[jj]], gm[[ii]], minover=0 )
+                gm[[jj]] <- terra::combineGeoms( gm[[jj]], gm[[ii]], minover=0 )
                 to_keep[ii] <- FALSE
             }
             
@@ -518,7 +517,7 @@ locate_gauges <- function(chn,gauges,gauge_name="name",max_dist = 100){
         g_buff <- terra::buffer(gauges, width=max_dist)
         idx <- terra::is.related(chn, g_buff, "intersects")
         chn <- chn[idx,]
-        dst <- distance(gauges,chn) ## distance between gauges(row) and channels(column)
+        dst <- terra::distance(gauges,chn) ## distance between gauges(row) and channels(column)
         idx <- apply(dst,1,which.min) ## index of closest channel for each gauge
         out <- data.frame(gauge_name = gauges[[gauge_name]],
                           channel_name = chn$name[ apply(dst,1,which.min) ],
@@ -526,7 +525,7 @@ locate_gauges <- function(chn,gauges,gauge_name="name",max_dist = 100){
         out$channel_name[ out$distance > max_dist ] <- NA
     }else{
         out <- list()
-        gnm <- values(gauges)[[gauge_name]]
+        gnm <- terra::values(gauges)[[gauge_name]]
         for(ii in 1:nrow(gauges)){
             idx <- terra::is.related(chn, gauges[ii,], "intersects")
             if( any(idx) ){

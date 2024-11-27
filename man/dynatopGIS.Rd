@@ -37,8 +37,8 @@ ctch$add_channel(chn)
 ## compute properties 
 ctch$sink_fill() ## fill sinks in the catchment and computes dem flow directions
 \donttest{
-ctch$compute_properties() # like topograpihc index and contour length
 ctch$compute_band()
+ctch$compute_properties() # like topograpihc index and contour length
 ctch$compute_flow_lengths()
 }
 ## classify and create a model
@@ -46,7 +46,7 @@ ctch$compute_flow_lengths()
 ctch$classify("atb_20","atb",cuts=20) # classify using the topographic index
 ctch$get_method("atb_20") ## see the details of the classification
 ctch$combine_classes("atb_20_band",c("atb_20","band")) ## combine classes
-ctch$create_model(file.path(demo_dir,"new_model"),"atb_20_band") ## create a model
+ctch$create_model(file.path(demo_dir,"new_model"),"atb_20") ## create a model
 list.files(demo_dir,pattern="new_model*") ## look at the output files for the model
 }
 ## tidy up

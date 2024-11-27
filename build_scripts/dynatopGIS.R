@@ -6,7 +6,8 @@ rm(list=ls())
 devtools::load_all()
 #library("dynatopGIS")
 
-demo_dir <- tempfile("dygis")
+demo_dir <- "./build_scripts/demo" #tempfile("dygis")
+unlink(demo_dir,recursive=TRUE)
 dir.create(demo_dir)
 
 ctch <- dynatopGIS$new(file.path(demo_dir))
@@ -77,9 +78,53 @@ ctch$plot_layer("atb_20_band_500")
 
 head( ctch$get_method("atb_20_band_500")$groups )
 
-ctch$create_model(file.path(demo_dir,"new_model"),"atb_20_band",verbose=TRUE)
+ctch$create_model(file.path(demo_dir,"new_model"),"atb_20",verbose=TRUE)
 
 list.files(demo_dir,pattern="new_model*")
 
 tmp <- readRDS( file.path(demo_dir, "new_model.rds") )
 mdl <- dynatop::dynatop$new(tmp$hru)
+
+## ## ## ###################################
+## rm(list=ls())
+## mdl <- readRDS("./demo/new_model.rds")$hru
+## bnd <- sapply(mdl,function(x){x$band})
+## for(h in mdl){
+##     if( length(h$sf_flow_direction$id) != length(h$sf_flow_direction$fraction) ){
+##         browser()
+##     }
+## }
+
+
+
+## ## ###################################
+## rm(list=ls())
+## mdl <- readRDS("./demo/new_model.rds")$hru
+## bnd <- sapply(mdl,function(x){x$band})
+## for(h in mdl){
+##     if(any( bnd[h$sf_flow_direction$id+1] >= h$band )){
+##         browser()
+##     }
+## }
+
+
+## ## ###################################
+## rm(list=ls())
+## library(terra)
+
+## bnd <- rast( "./demo/band.tif")
+
+## mbnd <- as.matrix(bnd,wide=TRUE)
+
+## dr <- readRDS("./demo/dem.rds")
+
+## nr <- nrow(mbnd)
+## delta <- c(-nr-1,-nr,-nr+1,-1,1,nr-1,nr,nr+1)
+
+## for(nr in nrow(dr)){
+##     ii <- dr[nr,1] ##cell
+##     jj <- ii+delta
+##     jj <- jj[ dr[nr,4:11]>0 ]
+
+##     if( !all( mbnd[jj] < mbnd[ii] ) ){ stop("Oh no!!") }
+## }
