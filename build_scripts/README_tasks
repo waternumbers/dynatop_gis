@@ -1,16 +1,17 @@
 ## Things to fix:
 
 convert_channel.R
-## documentation
 ## crop channels when merging in waterbodies - check same number  of inputs and outputs (unless wb added at top)
 ## look at erase to stop overlaps??
 ## look at speeding up simplifying the channel
 
+
 dynaGIS
-## tidyup handling of bands across the various methods
 ## check model build...
 ## remove forcing subcatchments in flow routing??
 ## documentation
+## stop fill_na renaming layers
+## hru class data in model build is not appeearing correctly
 
 dynatop
 ## allow offset for decomposing daily PET
