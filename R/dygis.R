@@ -1169,16 +1169,28 @@ dynatopGIS <- R6::R6Class(
             ## ############################################
             if(verbose){ cat("Processing channel HRU values","\n") }
             ## Loop channel properties
-            class_names <- setdiff(names(private$shp), c("id","band","width","length","slope"))
+            shp <- as.data.frame(private$shp)
+            class_names <- setdiff(names(shp), c("id","band","width","length","slope"))
             for(ii in 1:n_channel){
-                hru[[ii]]$id <- as.integer( private$shp$id[ii] )
-                hru[[ii]]$band <- as.integer( private$shp$band[ii] )
+                hru[[ii]]$id <- as.integer( shp$id[ii] )
+                hru[[ii]]$band <- as.integer( shp$band[ii] )
                 hru[[ii]]$properties["area"] <- 0
-                hru[[ii]]$properties["width"] <- as.numeric( private$shp$width[ii] )
-                hru[[ii]]$properties["Dx"] <- as.numeric( private$shp$length[ii] )
-                hru[[ii]]$properties["gradient"] <- as.numeric( private$shp$slope[ii] )
-                hru[[ii]]$class <- as.list( private$shp[ii,class_names] )
+                hru[[ii]]$properties["width"] <- as.numeric( shp$width[ii] )
+                hru[[ii]]$properties["Dx"] <- as.numeric( shp$length[ii] )
+                hru[[ii]]$properties["gradient"] <- as.numeric( shp$slope[ii] )
+                hru[[ii]]$class <- as.list( shp[ii,class_names] )
             }
+           ## class_names <- setdiff(names(private$shp), c("id","band","width","length","slope"))
+           ##  for(ii in 1:n_channel){
+           ##      print(ii)
+           ##      hru[[ii]]$id <- as.integer( private$shp$id[ii] )
+           ##      hru[[ii]]$band <- as.integer( private$shp$band[ii] )
+           ##      hru[[ii]]$properties["area"] <- 0
+           ##      hru[[ii]]$properties["width"] <- as.numeric( private$shp$width[ii] )
+           ##      hru[[ii]]$properties["Dx"] <- as.numeric( private$shp$length[ii] )
+           ##      hru[[ii]]$properties["gradient"] <- as.numeric( private$shp$slope[ii] )
+           ##      hru[[ii]]$class <- as.list( private$shp[ii,class_names] )
+           ##  }
 
             ## loop the channel routing
             for(ii in 1:nrow(channel_routing)){
