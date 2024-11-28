@@ -820,13 +820,14 @@ dynatopGIS <- R6::R6Class(
             ## merge upslope areas into the channel object
             ch_upa <- tapply(upa,ch,sum)
             ch_upa <- ch_upa[setdiff(names(ch_upa),"NaN")]
-            idx <- match(paste(private$shp$id),names(ch_upa))
-            private$shp$up_area = as.numeric(NA)
+            idx <- match(names(ch_upa),paste(private$shp$id)) #,names(ch_upa))
+            private$shp$up_area = 0
             private$shp$up_area[idx] <- as.numeric(ch_upa)
             if( !all(is.finite(private$shp$up_area)) ){ stop("All upslope channel areas should be finite") }
 
             ## remove channel area bit from upa
-            upa <- upa * !is.finite(ch)
+            upa[is.finite(ch)] <- NA
+##            upa <- upa * !is.finite(ch)
             
             ## compute catchment area to each reach
             ct_area <- private$shp$up_area

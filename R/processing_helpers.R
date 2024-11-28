@@ -24,7 +24,7 @@ fill_na <- function(rst,ctch,layer_name = names(rst)){
     for(ii in idx){ #layer_name){
         if( terra::global(is.na(rst[[ii]]) & !is.na(ctch),max)>0 ){
             while( terra::global(is.na(rst[[ii]]) & !is.na(ctch),max)>0 ){ ## if there is a big mismatch this is slow and b
-                rst[[ii]] <- terra::focal(rst[[ii]], w=3, fun="modal",na.rm=TRUE, na.policy="only",expand=TRUE)
+                values(rst[[ii]]) <- values(terra::focal(rst[[ii]], w=3, fun="modal",na.rm=TRUE, na.policy="only",expand=TRUE))
             }
         }
     }
