@@ -40,4 +40,4 @@ the git repository from within R using the devtools package:
 devtools::install_github("waternumbers/dynatopGIS")
 ```
 
-Prebuild packages of the development version (which may be ahead of CRAN) are available from the [r-universe](https://waternumbers.r-universe.dev/ui#package:dynatopGIS)
+Prebuild packages of the development version (which may be ahead of CRAN) are available from the [r-universe](https://waternumbers.r-universe.dev/#package:dynatopGIS)
