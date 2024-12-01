@@ -519,7 +519,7 @@ locate_gauges <- function(chn,gauges,gauge_name="name",max_dist = 100){
         chn <- chn[idx,]
         dst <- terra::distance(gauges,chn) ## distance between gauges(row) and channels(column)
         idx <- apply(dst,1,which.min) ## index of closest channel for each gauge
-        out <- data.frame(gauge_name = gauges[[gauge_name]],
+        out <- data.frame(name = terra::values(gauges)[[gauge_name]],
                           channel_name = chn$name[ apply(dst,1,which.min) ],
                           distance = apply(dst,1,min))
         out$channel_name[ out$distance > max_dist ] <- NA
@@ -529,11 +529,11 @@ locate_gauges <- function(chn,gauges,gauge_name="name",max_dist = 100){
         for(ii in 1:nrow(gauges)){
             idx <- terra::is.related(chn, gauges[ii,], "intersects")
             if( any(idx) ){
-                out[[ii]] <- data.frame(gauge_name = gnm[ii],
+                out[[ii]] <- data.frame(name = gnm[ii],
                                         channel_name = chn$name[idx][ !(chn$endNode[idx] %in% chn$startNode[idx]) ]
                                         )
             }else{
-                out[[ii]] <- data.frame(gauge_name = gnm[ii],
+                out[[ii]] <- data.frame(name = gnm[ii],
                                         channel_name = NA_character_
                                         )
             }
