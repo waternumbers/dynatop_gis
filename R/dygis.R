@@ -1161,6 +1161,7 @@ dynatopGIS <- R6::R6Class(
             hru_map <- pmin( M[["channel"]], hru_map, na.rm=TRUE )
             
             n_hru <- max(id) ## larget hru id number
+            hru_map_idx <- which( is.finite( hru_map ) )
             
             ## initalise the hrus
             if(verbose){ cat("Initialise the HRUs","\n") }
@@ -1180,17 +1181,6 @@ dynatopGIS <- R6::R6Class(
                 hru[[ii]]$properties["gradient"] <- as.numeric( shp$slope[ii] )
                 hru[[ii]]$class <- as.list( shp[ii,class_names] )
             }
-           ## class_names <- setdiff(names(private$shp), c("id","band","width","length","slope"))
-           ##  for(ii in 1:n_channel){
-           ##      print(ii)
-           ##      hru[[ii]]$id <- as.integer( private$shp$id[ii] )
-           ##      hru[[ii]]$band <- as.integer( private$shp$band[ii] )
-           ##      hru[[ii]]$properties["area"] <- 0
-           ##      hru[[ii]]$properties["width"] <- as.numeric( private$shp$width[ii] )
-           ##      hru[[ii]]$properties["Dx"] <- as.numeric( private$shp$length[ii] )
-           ##      hru[[ii]]$properties["gradient"] <- as.numeric( private$shp$slope[ii] )
-           ##      hru[[ii]]$class <- as.list( private$shp[ii,class_names] )
-           ##  }
 
             ## loop the channel routing
             for(ii in 1:nrow(channel_routing)){
@@ -1199,6 +1189,7 @@ dynatopGIS <- R6::R6Class(
                 ff <- channel_routing[ii,3]
                 hru[[jj]]$sf_flow_direction[kk] <- ff ## since everything appears once in routing
             }
+            
             ## loop to get outlets
             outlets <- list()
             cnt <- 1
@@ -1231,7 +1222,15 @@ dynatopGIS <- R6::R6Class(
                     hru[[jj]]$pet[kk] <- hru[[jj]]$pet[kk] + 1
                 }
             }
-
+            ## channels without any area need a dummy precip and pet input - this is not evaluated in the model since area is 0
+            if( !is.null(rain_lyr) ){ dummy_precip <- setNames(1, paste( min(M[[rain_lyr]],na.rm=T ) )) }
+            if( !is.null(pet_lyr) ){ dummy_pet <- setNames(1, paste( min(M[[pet_lyr]],na.rm=T ) )) }
+            for(ii in 1:n_channel){
+                if( hru[[ii]]$properties["area"] > 0 ){ next }
+                if( !is.null(rain_lyr) ){ hru[[ii]]$precip <- dummy_precip }
+                if( !is.null(pet_lyr) ){ hru[[ii]]$pet <- dummy_pet }
+            }
+            
             ## ############################################
             if(verbose){ cat("Processing hillslope HRU values","\n") }
             ## pass one to do some properties and rainfall
@@ -1297,8 +1296,11 @@ dynatopGIS <- R6::R6Class(
                 
             ## ############################################
             if(verbose){ cat("Finalising HRUs","\n") }
+            
+            
             for(ii in 1:n_hru){
                 hru[[ii]]$id <- as.integer(hru[[ii]]$id - 1) ## since 0 indexed in dynatop
+                hru[[ii]]$properties["gradient"] <- max(1e-10,hru[[ii]]$properties["gradient"]) ## apply min gradient
                 hru[[ii]]$precip <- list(name = paste0(rainfall_label,names(hru[[ii]]$precip)),
                                          fraction = as.numeric( hru[[ii]]$precip / sum(hru[[ii]]$precip) ))
                 hru[[ii]]$pet <- list(name = paste0(pet_label,names(hru[[ii]]$pet)),

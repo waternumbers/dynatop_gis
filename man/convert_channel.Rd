@@ -10,6 +10,7 @@ convert_channel(
     "startNode", endNode = "endNode", width = "width", slope = "slope", channelVol =
     "channelVol"),
   defaults = c(width = 2, slope = 0.001, depth = 1),
+  min_slope = 1e-06,
   drop = TRUE
 )
 }
@@ -19,6 +20,8 @@ convert_channel(
 \item{property_names}{a named vector of containing the columns of existing data properties required in the final SpatialPolygonsDataFrame}
 
 \item{defaults}{default values used to replace missing widths, slopes and depths}
+
+\item{min_slope}{minimum slope of the channel bed}
 
 \item{drop}{logical, should non-required proerties be dropped}
 }

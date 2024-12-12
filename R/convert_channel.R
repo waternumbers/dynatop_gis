@@ -10,6 +10,7 @@
 #' @param chn a SpatVect object or a file which can read by terra::vect to create one
 #' @param property_names a named vector of containing the columns of existing data properties required in the final SpatialPolygonsDataFrame
 #' @param defaults default values used to replace missing widths, slopes and depths
+#' @param min_slope minimum slope of the channel bed
 #' @param drop logical, should non-required proerties be dropped
 #'
 #' @return A SpatVect containing polygons of the channel network, with at least the following properties: name, length, area, width, slope, startNode, endNode and channelVol.
@@ -47,6 +48,7 @@ convert_channel <- function(chn,
                                              slope = "slope",
                                              channelVol = "channelVol"),
                             defaults = c("width"=2,"slope"=0.001,"depth"=1),
+                            min_slope = 1e-6,
                             drop = TRUE){
     
     ## read in the chn sp object is a character sting
@@ -81,7 +83,7 @@ convert_channel <- function(chn,
     chn$length <- as.numeric(chn$length)
     chn$area <- as.numeric(chn$area)
     chn$width <- as.numeric(chn$width)
-    chn$slope <- as.numeric(chn$slope)
+    chn$slope <- pmax(as.numeric(chn$slope), min_slope)
     chn$startNode <- as.character(chn$startNode)
     chn$endNode <- as.character(chn$endNode)
     chn$channelVol <- as.numeric(chn$channelVol)
