@@ -242,38 +242,16 @@ merge_channels <- function(x,y,outlets=NULL,verbose=FALSE){
             }
 
             ## redo end nodes
-            tmp <- unique( x_en[idx][ (edx & !sdx) | (edx & sdx) ] )
+            tmp <- unique( x_en[idx][ edx ] ) ## end Nodes in the new object
             x_en[ x_en %in% tmp ] <- y_sn[ii]
-            x_sn[ x_sn %in% tmp ] <- y_sn[ii]
-#            y_en[ y_en %in% tmp ] <- y_sn[ii]
-#            y_sn[ y_sn %in% tmp ] <- y_sn[ii]
-            
-            ## tmp <- unique( x$endNode[idx][ (edx & !sdx) | (edx & sdx) ] )
-            ## x$endNode[ x$endNode %in% tmp ] <- y$startNode[ii]
-            ## x$startNode[ x$startNode %in% tmp ] <- y$startNode[ii]
-            ## y$endNode[ y$endNode %in% tmp ] <- y$startNode[ii]
-            ## y$startNode[ y$startNode %in% tmp ] <- y$startNode[ii]
             
             ## redo start nodes
-            tmp <- unique( x_sn[idx][ (!edx & sdx) | (edx & sdx) ] )
+            tmp <- unique( x_sn[idx][sdx] )
             x_sn[ x_sn %in% tmp ] <- y_en[ii]
-            x_en[ x_en %in% tmp ] <- y_en[ii]
-#            y_sn[ y_sn %in% tmp ] <- y_en[ii]
-#            y_en[ y_en %in% tmp ] <- y_en[ii]
-
-            ## tmp <- unique( x$startNode[idx][ (!edx & sdx) | (edx & sdx) ] )
-            ## x$startNode[ x$startNode %in% tmp ] <- y$endNode[ii]
-            ## x$endNode[ x$endNode %in% tmp ] <- y$endNode[ii]
-            ## y$startNode[ y$startNode %in% tmp ] <- y$endNode[ii]
-            ## y$endNode[ y$endNode %in% tmp ] <- y$endNode[ii]
-
+            
             ## flag ones to remove
             keep_x[idx][ (edx & sdx) ] <- FALSE
             
-
-            ##x$endNode[idx][edx & !sdx] <- y$startNode[ii]
-            ##x$startNode[idx][!edx & sdx] <- y$endNode[ii]
-            ##keep_x[idx][ (edx & sdx) ] <- FALSE
         }
 
         if( verbose ){ setTxtProgressBar(pb, ii, title = NULL, label = NULL) }
@@ -281,8 +259,8 @@ merge_channels <- function(x,y,outlets=NULL,verbose=FALSE){
 
     x$endNode <- x_en
     x$startNode <- x_sn
-    y$endNode <- y_en
-    y$startNode <- y_sn
+#    y$endNode <- y_en
+#    y$startNode <- y_sn
 
     x <- rbind(x[keep_x,],y[keep_y,])
     
