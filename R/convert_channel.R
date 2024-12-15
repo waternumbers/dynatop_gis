@@ -1,9 +1,3 @@
-## to fix
-## warningnote when gm[] <- NULL
-## documentation
-## crop channels when merging in waterbodies - check same number  of inputs and outputs (unless wb added at top)
-
-
 #' Function for assisting in the conversion of object to be suitable channel inputs to a dynatopGIS object
 #'
 #' @description Converts SpatVect of the channel network into SpatVect containing polgons suitable for dynatopGIS
@@ -41,7 +35,7 @@
 convert_channel <- function(chn,
                             property_names=c(name = "name",
                                              length = "length",
-                                             area = "area",
+##                                             area = "area",
                                              startNode = "startNode",
                                              endNode = "endNode",
                                              width = "width",
@@ -60,11 +54,10 @@ convert_channel <- function(chn,
         }
     }
     ## check the SptVect object
-    stopifnot("The channel network does not have a line or polygon geometry (even when read in)" =
-                  terra::geomtype(chn) %in% c("lines","polygons"),
+    stopifnot("The channel network is not a line geometry (even when read in)" =
+                  terra::geomtype(chn) %in% "lines",
               "A field given in chn_property_names does not exist" = all( property_names %in% names(chn) )
               )
-    is_polygon <- terra::geomtype(chn)=="polygons"
     
     ## mutate the names so that they match those on the property_names
     nm <- names(chn)
@@ -74,16 +67,16 @@ convert_channel <- function(chn,
     names(chn) <- nm
 
     ## populate required values that don't have columns
-    for(ii in setdiff( c("name","length","area","width","slope","startNode","endNode", "channelVol"), names(chn) )){
+    for(ii in setdiff( c("name","length","width","slope","startNode","endNode", "channelVol"), names(chn) )){
         chn[[ii]] <- NA
     }
     
     ## some type conversions
     chn$name <- as.character(chn$name)
     chn$length <- as.numeric(chn$length)
-    chn$area <- as.numeric(chn$area)
+##    chn$area <- as.numeric(chn$area)
     chn$width <- as.numeric(chn$width)
-    chn$slope <- pmax(as.numeric(chn$slope), min_slope)
+    chn$slope <- as.numeric(chn$slope)
     chn$startNode <- as.character(chn$startNode)
     chn$endNode <- as.character(chn$endNode)
     chn$channelVol <- as.numeric(chn$channelVol)
@@ -100,7 +93,8 @@ convert_channel <- function(chn,
     ## populate the easier missing values
     idx <- is.na(chn$slope); if(any(idx)){ warning("Replacing missing slopes with default") }
     chn$slope[ idx ] <- defaults["slope"]
-
+    chn$slope <- pmax(chn$slope, min_slope)
+    
     idx <- is.na(chn$startNode); if(any(idx)){ warning("Generating missing startNode values") }
     chn$startNode[idx] <- paste0("sn_", chn$name[idx])
 
@@ -108,27 +102,16 @@ convert_channel <- function(chn,
     chn$endNode[idx] <- paste0("en_", chn$name[idx])
     
     ## process width depending upon if a SpatialPolygon object
-    if(is_polygon){
-        idx <- is.na(chn$area); if(any(idx)){ warning("Computing missing area values") }
-        chn$area[idx] <- terra::expanse(chn[idx,])
-        idx <- is.na(chn$width); if(any(idx)){ warning("Computing missing width values") }
-        chn$width[idx] <- chn$area[idx] / chn$length[idx]
-    }else{
-        idx <- is.na(chn$width); if(any(idx)){ warning("Replacing missing widths with default") }
-        chn$width[idx] <- defaults["width"]
-        warning("Buffering channel with specified widths")
-        chn <- terra::buffer(chn, width=chn$width/2)
-        idx <- is.na(chn$area); if(any(idx)){ warning("Computing missing area values") }
-        chn$area[idx] <- terra::expanse(chn[idx,])
-    }
-
+    idx <- is.na(chn$width); if(any(idx)){ warning("Replacing missing widths with default") }
+    chn$width[idx] <- defaults["width"]
+    
     ## fill missing channel volumes
     idx <- is.na(chn$channelVol); if(any(idx)){ warning("Replacing missing channel volumes with computed values") }
-    chn$channelVol[idx] <- chn$area[idx] * defaults["depth"]
+    chn$channelVol[idx] <- chn$length[idx] * chn$width[idx] * defaults["depth"]
 
     ## drop
     if(drop){
-        chn <- chn[, c("name","length","area","width","slope","startNode","endNode", "channelVol") ]
+        chn <- chn[, c("name","length","width","slope","startNode","endNode", "channelVol") ]
     }
 
     ## final check it is a channel...
@@ -194,7 +177,8 @@ trim_channel <- function(chn,outlets,removed=FALSE){
 #' @details Elements in x are either cropped, or fully removed if they lie under y. Attempts are made to ensure that the start and end Nodes are suitably replaced
 #' @export
 merge_channels <- function(x,y,outlets=NULL,verbose=FALSE){
-
+    stop("this function is not rewritten")
+    
     ## check x is a channel
     if(is.character(x)){ x <- terra::vect(x) }
     check_channel(x,outlets)
@@ -450,7 +434,7 @@ simplify_channel <- function(chn, simplify_length=100, outlets=NULL, strict_rout
 check_channel <- function(chn,outlets=NULL){
     chn_outlets <- chn$name[ !(chn$endNode %in% chn$startNode) ]
     stopifnot(
-        "The channel network does not have a polygon geometry" = terra::geomtype(chn) == "polygons",
+        "The channel network does not have a line geometry" = terra::geomtype(chn) == "lines",
         ## names
         "name property is missing" = "name" %in% names(chn),
         "names should be strings" = is.character(chn$name),
@@ -476,10 +460,10 @@ check_channel <- function(chn,outlets=NULL){
         "width property is missing" = "width" %in% names(chn),
         "widths should be numeric" = is.numeric(chn$width),
         "widths cannot be missing" = !any(is.na(chn$width)),
-        ## area
-        "area property is missing" = "area" %in% names(chn),
-        "areas should be numeric" = is.numeric(chn$area),
-        "areas cannot be missing" = !any(is.na(chn$area)),
+        ## ## area
+        ## "area property is missing" = "area" %in% names(chn),
+        ## "areas should be numeric" = is.numeric(chn$area),
+        ## "areas cannot be missing" = !any(is.na(chn$area)),
         ## channelVol
         "channelVol property is missing" = "channelVol" %in% names(chn),
         "channelVols should be numeric" = is.numeric(chn$channelVol),
@@ -503,7 +487,8 @@ check_channel <- function(chn,outlets=NULL){
 #' @details If gauges are points the nearest channel length within max_dist is chosen. If catchment polygons are given all channel lengths leaving the catchment are returned.
 #' @export
 locate_gauges <- function(chn,gauges,gauge_name="name",max_dist = 100){
-
+    warning("This function is not checked")
+    
     ## check chn is a channel
     if(is.character(chn)){ chn <- terra::vect(chn) }
     check_channel(chn)

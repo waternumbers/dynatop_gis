@@ -147,7 +147,6 @@ endNode, length) but the remainder are missing. Also the river network is
 defined as a series of lines, rather then polygons. The `convert_channel`
 function addresses these shortcomings by 
 - changing the names of the required properties
-- buffering the line objects to create polygons
 
 The `convert_channel` function takes a named vector giving the variable names
 to be use for the properties. If we want to carry over the identifier as the name we could call
@@ -233,63 +232,63 @@ ctch$compute_band()
 ctch$plot_layer("band")
 ```
 
-# Computing properties
+<!-- # Computing properties -->
 
-Two sets of properties are required for Dynamic TOPMODEL. The first set is
-those required within the evaluation of the model; gradient and contour
-length. The second set are those used for dividing the catchment up into
-Hydrological Response Units (HRUs). Traditionally the summary used for the
-separation of the HRUs is the topographic index, which is the natural
-logarithm of the upslope area divided by gradient.
+<!-- Two sets of properties are required for Dynamic TOPMODEL. The first set is -->
+<!-- those required within the evaluation of the model; gradient and contour -->
+<!-- length. The second set are those used for dividing the catchment up into -->
+<!-- Hydrological Response Units (HRUs). Traditionally the summary used for the -->
+<!-- separation of the HRUs is the topographic index, which is the natural -->
+<!-- logarithm of the upslope area divided by gradient. -->
 
-These are computed using the formulae in [Quinn et al. 1991](https://doi.org/10.1002/hyp.3360050106).
+<!-- These are computed using the formulae in [Quinn et al. 1991](https://doi.org/10.1002/hyp.3360050106). -->
 
-The upstream area is computed by routing down slope with the fraction of the
-area being routed to the next downstream pixel being proportional to the
-gradient times the contour length. 
+<!-- The upstream area is computed by routing down slope with the fraction of the -->
+<!-- area being routed to the next downstream pixel being proportional to the -->
+<!-- gradient times the contour length.  -->
 
-The local value of the gradient is computed using the average of a
-subset of between pixel gradients. For a normal 'hill slope' cell these are the
-gradients to downslope pixels weighted by contour length. In the case of
-pixels which contain river channels the average of the gradients from upslope
-pixels weighted by contour length us used.
+<!-- The local value of the gradient is computed using the average of a -->
+<!-- subset of between pixel gradients. For a normal 'hill slope' cell these are the -->
+<!-- gradients to downslope pixels weighted by contour length. In the case of -->
+<!-- pixels which contain river channels the average of the gradients from upslope -->
+<!-- pixels weighted by contour length us used. -->
 
-These properties are computed in an algorithm that passes over
-the data once in descending height. It is called as follows
+<!-- These properties are computed in an algorithm that passes over -->
+<!-- the data once in descending height. It is called as follows -->
 
-```{r, calc_atb}
-ctch$compute_properties()
+<!-- ```{r, calc_atb} -->
+<!-- ctch$compute_properties() -->
+<!-- ``` -->
+
+<!-- The plot of the topographic index shows a pattern of increasing values closer -->
+<!-- to the river channels -->
+
+<!-- ```{r, plot_atb} -->
+<!-- ## plot of topographic index (log(a/tan b)) -->
+<!-- ctch$plot_layer('atb') -->
 ```
 
-The plot of the topographic index shows a pattern of increasing values closer
-to the river channels
+<!-- Although not used in ordering the HRUs `dynatopGIS` also provides the ability to compute flow distances for the hill slope cells. -->
+<!-- The calculation of three distances is supported -->
 
-```{r, plot_atb}
-## plot of topographic index (log(a/tan b))
-ctch$plot_layer('atb')
-```
+<!-- - *shortest flow length* - the shortest length based on the pixel flow paths -->
+<!-- to a channel -->
+<!-- - *Dominant flow length* - the distance to a channel moving in the dominant -->
+<!-- (largest fraction) flow direction from any grid cell -->
+<!-- - *Expected flow length* - the distance to the channel based on a weighted -->
+<!-- average of the down-slope flow lengths. Weights are given by the fraction of -->
+<!-- flow in each direction. -->
 
-Although not used in ordering the HRUs `dynatopGIS` also provides the ability to compute flow distances for the hill slope cells.
-The calculation of three distances is supported
+<!-- The computation, in this example for the shortest flow length, is initiated with -->
+<!-- ```{r, flow_length} -->
+<!-- ctch$compute_flow_lengths(flow_routing="shortest") -->
+<!-- ``` -->
 
-- *shortest flow length* - the shortest length based on the pixel flow paths
-to a channel
-- *Dominant flow length* - the distance to a channel moving in the dominant
-(largest fraction) flow direction from any grid cell
-- *Expected flow length* - the distance to the channel based on a weighted
-average of the down-slope flow lengths. Weights are given by the fraction of
-flow in each direction.
-
-The computation, in this example for the shortest flow length, is initiated with
-```{r, flow_length}
-ctch$compute_flow_lengths(flow_routing="shortest")
-```
-
-The additional layers can be examined as expected
-```{r, flow_length_plot}
-ctch$get_layer()
-ctch$plot_layer("shortest_flow_length")
-```
+<!-- The additional layers can be examined as expected -->
+<!-- ```{r, flow_length_plot} -->
+<!-- ctch$get_layer() -->
+<!-- ctch$plot_layer("shortest_flow_length") -->
+<!-- ``` -->
 
 
 ## Adding additional layer
@@ -315,66 +314,66 @@ ctch$add_layer(tmp, "greater_500")
 ctch$get_layer()
 ```
 
-# Classifying into Hydrological Response Units
+<!-- # Classifying into Hydrological Response Units -->
 
-Methods are provided for the classification of the catchment areas of similar
- hydrological response. The classifications generated in this process are
- augmented with a further distance based separation when generating a
- `dynatop` model (see following section).
+<!-- Methods are provided for the classification of the catchment areas of similar -->
+<!--  hydrological response. The classifications generated in this process are -->
+<!--  augmented with a further distance based separation when generating a -->
+<!--  `dynatop` model (see following section). -->
 
-By definition each channel length is treated as belonging to a single class. 
+<!-- By definition each channel length is treated as belonging to a single class.  -->
 
-To classify the hillslope two methods can be used.
+<!-- To classify the hillslope two methods can be used. -->
 
-The `classify` method of a `dynatopGIS` allows a landscape property to be
-*cut* into classes. 
+<!-- The `classify` method of a `dynatopGIS` allows a landscape property to be -->
+<!-- *cut* into classes.  -->
 
-For example to cut the topographic index for Swindale into 21 classes:
+<!-- For example to cut the topographic index for Swindale into 21 classes: -->
 
-```{r, atb_split}
-ctch$classify("atb_20","atb",cuts=20)
-ctch$plot_layer("atb_20")
-```
+<!-- ```{r, atb_split} -->
+<!-- ctch$classify("atb_20","atb",cuts=20) -->
+<!-- ctch$plot_layer("atb_20") -->
+<!-- ``` -->
 
-Providing a single value to the cuts argument determines the number of classes.
-The values used to cut the variable can be extracted from the meta data with
+<!-- Providing a single value to the cuts argument determines the number of classes. -->
+<!-- The values used to cut the variable can be extracted from the meta data with -->
 
-```{r,atb_splt_get_class}
-ctch$get_method("atb_20")
-```
+<!-- ```{r,atb_splt_get_class} -->
+<!-- ctch$get_method("atb_20") -->
+<!-- ``` -->
 
-The `combine_classes` method of a `dynatopGIS` allows classes to be combined
-in two ways, which are applied in the order shown
+<!-- The `combine_classes` method of a `dynatopGIS` allows classes to be combined -->
+<!-- in two ways, which are applied in the order shown -->
 
-- *pairing* - where unique combinations of classes create one new class
-- *burning* - where a single class is imposed upon an area
+<!-- - *pairing* - where unique combinations of classes create one new class -->
+<!-- - *burning* - where a single class is imposed upon an area -->
 
-To demonstrate a pairing combination consider combining the atb classes
-generated above with the classification provided by the distance band
+<!-- To demonstrate a pairing combination consider combining the atb classes -->
+<!-- generated above with the classification provided by the distance band -->
 
-```{r, atb_20_band}
-ctch$combine_classes("atb_20_band",c("atb_20","band"))
-ctch$plot_layer("atb_20_band")
-```
+<!-- ```{r, atb_20_band} -->
+<!-- ctch$combine_classes("atb_20_band",c("atb_20","band")) -->
+<!-- ctch$plot_layer("atb_20_band") -->
+<!-- ``` -->
 
-Additionally the land greater then 500 in altitude can be burnt in with
+<!-- Additionally the land greater then 500 in altitude can be burnt in with -->
 
-```{r, atb_20_band_burn}
-ctch$combine_classes("atb_20_band_500",pairs=c("atb_20","band"),burns="greater_500")
-ctch$plot_layer("atb_20_band_500")
-```
+<!-- ```{r, atb_20_band_burn} -->
+<!-- ctch$combine_classes("atb_20_band_500",pairs=c("atb_20","band"),burns="greater_500") -->
+<!-- ctch$plot_layer("atb_20_band_500") -->
+<!-- ``` -->
 
-The each class in the combined classification the values of the classes used
-in the computations can be returned
+<!-- The each class in the combined classification the values of the classes used -->
+<!-- in the computations can be returned -->
 
 
-```{r see_class}
-head( ctch$get_method("atb_20_band_500")$groups )
-```
+<!-- ```{r see_class} -->
+<!-- head( ctch$get_method("atb_20_band_500")$groups ) -->
+<!-- ``` -->
 
-Note that by giving the area to be burnt in a negative value when it was
-generated above we have ensured that the values do not clash with those generated by the cuts which
-(except potentially when a cut is NA) which will always be positive.
+<!-- Note that by giving the area to be burnt in a negative value when it was -->
+<!-- generated above we have ensured that the values do not clash with those generated by the cuts which -->
+<!-- (except potentially when a cut is NA) which will always be positive. -->
 
 # Generating a dynamic TOPMODEL
 
@@ -399,7 +398,7 @@ For example, in the case of the division of Swindale by topographic index into
 21 classes and the bands directly the resulting model can be generated by
 
 ```{r, model_atb_split}
-ctch$create_model(file.path(demo_dir,"new_model"),"atb_20")
+ctch$create_model(file.path(demo_dir,"new_model"))
 ```
 
 Looking at the files within the `demo_dir` folder

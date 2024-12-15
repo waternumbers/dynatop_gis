@@ -47,43 +47,19 @@ terra::plot( ctch$get_layer('filled_dem') - ctch$get_layer('dem'),
 ctch$compute_band()
 ctch$plot_layer("band")
 
-ctch$compute_properties()
-
-## plot of topographic index (log(a/tan b))
-ctch$plot_layer('atb')
-
-ctch$compute_flow_lengths(flow_routing="shortest")
-
-ctch$get_layer()
-ctch$plot_layer("shortest_flow_length")
-
 tmp <- ctch$get_layer("filled_dem")
-
-
 tmp <- terra::ifel(tmp<=500,NA,-999)
 
 ctch$add_layer(tmp, "greater_500")
 ctch$get_layer()
 
-ctch$classify("atb_20","atb",cuts=20)
-ctch$plot_layer("atb_20")
 
-ctch$get_method("atb_20")
-
-ctch$combine_classes("atb_20_band",c("atb_20","band"))
-ctch$plot_layer("atb_20_band")
-
-ctch$combine_classes("atb_20_band_500",pairs=c("atb_20","band"),burns="greater_500")
-ctch$plot_layer("atb_20_band_500")
-
-head( ctch$get_method("atb_20_band_500")$groups )
-
-ctch$create_model(file.path(demo_dir,"new_model"),"atb_20",verbose=TRUE)
+ctch$create_model(file.path(demo_dir,"new_model"),verbose=TRUE)
 
 list.files(demo_dir,pattern="new_model*")
 
-tmp <- readRDS( file.path(demo_dir, "new_model.rds") )
-mdl <- dynatop::dynatop$new(tmp$hru)
+#tmp <- readRDS( file.path(demo_dir, "new_model.rds") )
+#mdl <- dynatop::dynatop$new(tmp$hru)
 
 ## ## ## ###################################
 ## rm(list=ls())
