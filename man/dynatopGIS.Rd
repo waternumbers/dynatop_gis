@@ -34,7 +34,7 @@ property_names <- c(name="identifier",endNode="endNode",startNode="startNode",le
 chn <- convert_channel(sp_lines,property_names)
 ctch$add_channel(chn)
 
-## compute properties 
+## compute properties
 ctch$sink_fill() ## fill sinks in the catchment and computes dem flow directions
 \donttest{
 ctch$compute_band()
@@ -80,18 +80,18 @@ unlink(demo_dir)
 \subsection{Method \code{new()}}{
 Initialise a project, or reopen an existing project
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{dynatopGIS$new(projectFolder)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{dynatopGIS$new(projectFile)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{projectFolder}}{folder for data files}
+\item{\code{projectFile}}{Either the tif file of spatial maps or the correspondingly names shapefile of channels}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Details}{
-This loads the project data files found in the \code{projectFolder} if present. If not the folder is created. The project data files are given by \code{projectFolder/<filename>.<tif,shp>}
+This loads either the tif or shape file, looks for the other then does some basic consistancy checks. If neither exist nothing is done but the filename is recorded.
 }
 
 \subsection{Returns}{
