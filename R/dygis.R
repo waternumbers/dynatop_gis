@@ -123,10 +123,10 @@ dynatopGIS <- R6::R6Class(
             if( "channel" %in% tmp ){ tmp <- c(tmp,"channel_vect") }
 
             if(is.null(layer_name)){ return(tmp) }
-            
+
             ## check layer name exists
             layer_name <- match.arg(layer_name,tmp,several.ok=TRUE)
-            
+
             ## make raster and return
             if( "channel_vect" %in% layer_name){
                 return( private$chn )
@@ -389,7 +389,7 @@ dynatopGIS <- R6::R6Class(
         },
         ## add the channel
         apply_add_channel = function(chn,verbose){
-            
+
             rq <- c("catchment")
             chn_variables <- c(
                 "name" = "character",
@@ -608,7 +608,7 @@ dynatopGIS <- R6::R6Class(
             }
 
             private$save_project()
-            
+
             if(it>max_it){ stop("Maximum number of iterations reached, sink filling not complete") }
 
         },
@@ -616,7 +616,7 @@ dynatopGIS <- R6::R6Class(
         ## if we go up in height order then we are working from near the channel to the heighest point
         ## could add back in flow distances here
         apply_upward_pass = function(verbose){
-            
+
             rq <- c("filled_dem","channel")
             stopifnot(
                 "Not all required input layers have been generated \n Try running sink_fill first" =
@@ -1105,14 +1105,14 @@ dynatopGIS <- R6::R6Class(
             }
             if( any(is.na(brk)) ){ stop("NA value in brk") }
             M <- cbind( head(brk,-1), tail(brk,-1), 1:(length(brk)-1) )
-            
+
             ## cut the raster and save
 
             return( terra::classify(x,rcl=M,include.lowest=TRUE,names=layer_name) )
         },
         ## split_to_class
         apply_combine_classes = function(layer_name,pairs,burns){
-            
+
             stopifnot(
                 "Missing layers in pairs list" = all(pairs %in% names(private$brk)),
                 "Missing layers in burns list" = all(burns %in% names(private$brk)),
@@ -1122,7 +1122,7 @@ dynatopGIS <- R6::R6Class(
             x <- terra::as.matrix( private$brk[[ pairs ]] )
             idx <- rowSums(is.finite(x)) == ncol(x) ## thses are the valid cells
             xstr <- apply(x,1,function(r){paste(r,collapse="_")})
-                            
+
             ## add burns sequentally
             if(length(burns)>0){
                 y <- terra::as.matrix( private$brk[[ burns ]] )
@@ -1207,7 +1207,7 @@ dynatopGIS <- R6::R6Class(
                                       layer_name,verbose,
                                       sf_opt,
                                       sz_opt){
-            
+
             ## check layers
             rq <- c("dem","channel",
                     "band",class_lyr,
@@ -1230,7 +1230,7 @@ dynatopGIS <- R6::R6Class(
             hru_map <- terra::as.matrix(private$brk$channel) #,wide=TRUE)
             band <- terra::as.matrix(private$brk$band,wide=TRUE)
             ## to make the following sq need to fill by row
-            hru_info <- terra::as.matrix(private$brk[[ c("band",class_lyr) ]]) ## to make wide this need to 
+            hru_info <- terra::as.matrix(private$brk[[ c("band",class_lyr) ]]) ## to make wide this need to
             cls <- apply(hru_info,1,function(xx){paste(xx,collapse="_")})
             cls[!is.finite(hru_info[,1])] <- NA
             cls[is.finite(hru_map)] <- NA
@@ -1366,6 +1366,7 @@ dynatopGIS <- R6::R6Class(
                     hru[[ii]]$id <- as.integer( shp$id[ii] )
                     hru[[ii]]$band <- as.integer( shp$band[ii] )
                     hru[[ii]]$properties["Dx"] <- as.numeric( shp$length[ii] )
+                    hru[[ii]]$properties["width"] <- as.numeric( shp$width[ii] ) ##TO REMOVE this is just there to keep dynatop happy until we alter it
                     hru[[ii]]$properties["gradient"] <- as.numeric( shp$slope[ii] )
                     hru[[ii]]$class <- as.list( shp[ii,chn_class_names] )
 
@@ -1392,10 +1393,11 @@ dynatopGIS <- R6::R6Class(
 
                 }else{
                     ## hillslope HRU
-                    ##browser()
                     if( length(hru[[ii]]$sf_flow_direction)==0 ){ stop("Hillslope HRU with no outflow") }
                     if( hru[[ii]]$properties["area"]==0 ){ stop("Hillslope HRU with no area") }
                     hru[[ii]]$properties["gradient"] <- hru[[ii]]$properties["gradient"] / hru[[ii]]$properties["width"]
+                    hru[[ii]]$properties["Dx"] <- as.numeric(  hru[[ii]]$properties["area"] * cell_area / hru[[ii]]$properties["width"] ) ##TO REMOVE this is just there to keep dynatop happy until we alter it                   ##browser()
+
                     hru[[ii]]$sf_flow_direction <- hru[[ii]]$sf_flow_direction / sum(hru[[ii]]$sf_flow_direction)
                 }
 
@@ -1408,8 +1410,9 @@ dynatopGIS <- R6::R6Class(
                                       fraction = as.numeric( hru[[ii]]$pet / sum(hru[[ii]]$pet) ))
                 if(length(hru[[ii]]$sf_flow_direction)>0){
                     hru[[ii]]$sf_flow_direction <- list(
-                        id = as.integer(names(hru[[ii]]$sf_flow_direction)) - 1, # since 0 indexed in dynatop
+                        id = as.integer(names(hru[[ii]]$sf_flow_direction)) - 1L, # since 0 indexed in dynatop
                         fraction = as.numeric( hru[[ii]]$sf_flow_direction ))
+
                 }else{
                     hru[[ii]]$sf_flow_direction <- list(
                         id = integer(0),
@@ -1417,6 +1420,8 @@ dynatopGIS <- R6::R6Class(
                 }
                 hru[[ii]]$sz_flow_direction <- hru[[ii]]$sf_flow_direction
             }
+            outlets <- do.call(rbind,outlets)
+
             ## correct maps etc to 0 index
             hru_map[] <- as.integer(hru_map-1)
             outlets$id <- as.integer( outlets$id - 1 )

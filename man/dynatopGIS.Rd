@@ -63,14 +63,11 @@ unlink(demo_dir)
 \item \href{#method-dynatopGIS-get_layer}{\code{dynatopGIS$get_layer()}}
 \item \href{#method-dynatopGIS-plot_layer}{\code{dynatopGIS$plot_layer()}}
 \item \href{#method-dynatopGIS-sink_fill}{\code{dynatopGIS$sink_fill()}}
-\item \href{#method-dynatopGIS-compute_band}{\code{dynatopGIS$compute_band()}}
 \item \href{#method-dynatopGIS-compute_properties}{\code{dynatopGIS$compute_properties()}}
-\item \href{#method-dynatopGIS-compute_flow_lengths}{\code{dynatopGIS$compute_flow_lengths()}}
 \item \href{#method-dynatopGIS-classify}{\code{dynatopGIS$classify()}}
 \item \href{#method-dynatopGIS-combine_classes}{\code{dynatopGIS$combine_classes()}}
 \item \href{#method-dynatopGIS-create_model}{\code{dynatopGIS$create_model()}}
 \item \href{#method-dynatopGIS-get_version}{\code{dynatopGIS$get_version()}}
-\item \href{#method-dynatopGIS-get_method}{\code{dynatopGIS$get_method()}}
 \item \href{#method-dynatopGIS-clone}{\code{dynatopGIS$clone()}}
 }
 }
@@ -208,7 +205,7 @@ suitable for chaining
 \subsection{Method \code{get_layer()}}{
 Get a layer of geographical information or a list of layer names
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{dynatopGIS$get_layer(layer_name = character(0))}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{dynatopGIS$get_layer(layer_name = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -284,29 +281,6 @@ The flow_type can be either
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-dynatopGIS-compute_band"></a>}}
-\if{latex}{\out{\hypertarget{method-dynatopGIS-compute_band}{}}}
-\subsection{Method \code{compute_band()}}{
-Computes the computational band of each cell
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{dynatopGIS$compute_band(type = c("strict"), verbose = FALSE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{type}}{type of banding}
-
-\item{\code{verbose}}{print out additional diagnostic information}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Details}{
-Banding is used within the model to define the HRUs and control the order of the flow between them; HRUs can only pass flow to HRUs in a lower numbered band. Currently only a strict ordering of river channels and cells in the DEM is implemented. To compute this the algorithm passes first up the channel network (with outlets being in band 1) then through the cells of the DEM in increasing height.
-}
-
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-dynatopGIS-compute_properties"></a>}}
 \if{latex}{\out{\hypertarget{method-dynatopGIS-compute_properties}{}}}
 \subsection{Method \code{compute_properties()}}{
@@ -326,32 +300,6 @@ Computes statistics e.g. gradient, log(upslope area / gradient) for raster cells
 }
 \subsection{Details}{
 The algorithm passed through the cells in decreasing height. Min grad is applied to all cells. It is also used for missing gradients in pixels which are partially channel but have no upslope neighbours.
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-dynatopGIS-compute_flow_lengths"></a>}}
-\if{latex}{\out{\hypertarget{method-dynatopGIS-compute_flow_lengths}{}}}
-\subsection{Method \code{compute_flow_lengths()}}{
-Computes flow length for each pixel to the channel
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{dynatopGIS$compute_flow_lengths(
-  flow_routing = c("expected", "dominant", "shortest"),
-  verbose = FALSE
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{flow_routing}}{TODO}
-
-\item{\code{verbose}}{print out additional diagnostic information}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Details}{
-The algorithm passes through the cells in the DEM in increasing height. Three measures of flow length to the channel are computed. The shortest length (minimum length to channel through any flow path), the dominant length (the length taking the flow direction with the highest fraction for each pixel on the path) and expected flow length (flow length based on sum of downslope flow lengths based on fraction of flow to each cell). By definition cells in the channel that have no land area have a length of NA.
 }
 
 }
@@ -469,26 +417,6 @@ the version number indicates the version of the algorithms within the object
 
 \subsection{Returns}{
 a numeric version number
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-dynatopGIS-get_method"></a>}}
-\if{latex}{\out{\hypertarget{method-dynatopGIS-get_method}{}}}
-\subsection{Method \code{get_method()}}{
-get the cuts and burns used to classify
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{dynatopGIS$get_method(layer_name)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{layer_name}}{the name of layer whose classification method is returned}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-a list with two elements, cuts and burns
 }
 }
 \if{html}{\out{<hr>}}
