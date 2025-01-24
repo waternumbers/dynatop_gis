@@ -117,20 +117,19 @@ dynatopGIS <- R6::R6Class(
         #' @description Get a layer of geographical information or a list of layer names
         #' @param layer_name name of the layer give to the layer
         #' @return a `raster` layer of the requested information if layer_name is given else a vector of layer names
-        get_layer = function(layer_name=character(0)){
-            ## create a data frame of available layers
-            tmp <- data.frame(layer = names(private$brk), source = terra::sources(private$brk))
-            if( "channel" %in% tmp$layer ){ tmp <- rbind(tmp, data.frame(layer="channel_vect", source= terra::sources(private$shp))) }
+        get_layer = function(layer_name=NULL){
+            ## create a vector of available layers
+            tmp <- names(private$brk)
+            if( "channel" %in% tmp ){ tmp <- c(tmp,"channel_vect") }
 
-            ## handle case where a list of layers is requested
-            if( length(layer_name) == 0 ){ return(tmp) }
-
+            if(is.null(layer_name)){ return(tmp) }
+            
             ## check layer name exists
-            layer_name <- match.arg(layer_name,tmp$layer)
-
+            layer_name <- match.arg(layer_name,tmp,several.ok=TRUE)
+            
             ## make raster and return
-            if( layer_name == "channel_vect" ){
-                return( private$shp )
+            if( "channel_vect" %in% layer_name){
+                return( private$chn )
             }else{
                 return( private$brk[[layer_name]] )
             }
@@ -140,10 +139,11 @@ dynatopGIS <- R6::R6Class(
         #' @param add_channel should the channel be added to the plot
         #' @return a plot
         plot_layer = function(layer_name,add_channel=TRUE){
+            layer_name <- layer_name[1]
             lyr <- self$get_layer(layer_name)
             terra::plot( lyr, main = layer_name)
-            if( add_channel & length(private$shp) > 0){
-                terra::plot(private$shp, add=TRUE )
+            if( add_channel & length(private$chn) > 0){
+                terra::plot(private$chn, add=TRUE )
             }
         },
         #' @description The sink filling algorithm of Planchona and Darboux (2001)
@@ -164,17 +164,17 @@ dynatopGIS <- R6::R6Class(
             private$apply_sink_fill(min_grad,max_it,verbose,hot_start,flow_type)
             invisible(self)
         },
-        #' @description Computes the computational band of each cell
-        #'
-        #' @param type type of banding
-        #' @param verbose print out additional diagnostic information
-        #'
-        #' @details Banding is used within the model to define the HRUs and control the order of the flow between them; HRUs can only pass flow to HRUs in a lower numbered band. Currently only a strict ordering of river channels and cells in the DEM is implemented. To compute this the algorithm passes first up the channel network (with outlets being in band 1) then through the cells of the DEM in increasing height.
-        compute_band = function(type=c("strict"), verbose=FALSE){
-            type = match.arg(type)
-            private$apply_band(type,verbose)
-            invisible(self)
-        },
+        ## #' @description Computes the computational band of each cell
+        ## #'
+        ## #' @param type type of banding
+        ## #' @param verbose print out additional diagnostic information
+        ## #'
+        ## #' @details Banding is used within the model to define the HRUs and control the order of the flow between them; HRUs can only pass flow to HRUs in a lower numbered band. Currently only a strict ordering of river channels and cells in the DEM is implemented. To compute this the algorithm passes first up the channel network (with outlets being in band 1) then through the cells of the DEM in increasing height.
+        ## compute_band = function(type=c("strict"), verbose=FALSE){
+        ##     type = match.arg(type)
+        ##     private$apply_band(type,verbose)
+        ##     invisible(self)
+        ## },
         #' @description Computes statistics e.g. gradient, log(upslope area / gradient) for raster cells
         #'
         #' @param min_grad gradient that can be assigned to a pixel if it can't be computed
@@ -182,20 +182,21 @@ dynatopGIS <- R6::R6Class(
         #'
         #' @details The algorithm passed through the cells in decreasing height. Min grad is applied to all cells. It is also used for missing gradients in pixels which are partially channel but have no upslope neighbours.
         compute_properties = function(min_grad = 1e-4,verbose=FALSE){
-            private$apply_compute_properties(min_grad,verbose)
+            private$apply_upward_pass(verbose)
+            private$apply_downward_pass(min_grad,verbose)
             invisible(self)
         },
-        #' @description Computes flow length for each pixel to the channel
-        #'
-        #' @param flow_routing TODO
-        #' @param verbose print out additional diagnostic information
-        #'
-        #' @details The algorithm passes through the cells in the DEM in increasing height. Three measures of flow length to the channel are computed. The shortest length (minimum length to channel through any flow path), the dominant length (the length taking the flow direction with the highest fraction for each pixel on the path) and expected flow length (flow length based on sum of downslope flow lengths based on fraction of flow to each cell). By definition cells in the channel that have no land area have a length of NA.
-        compute_flow_lengths = function(flow_routing=c("expected","dominant","shortest"), verbose=FALSE){
-            flow_routing = match.arg(flow_routing)
-            private$apply_flow_lengths(flow_routing,verbose)
-            invisible(self)
-        },
+        ## #' @description Computes flow length for each pixel to the channel
+        ## #'
+        ## #' @param flow_routing TODO
+        ## #' @param verbose print out additional diagnostic information
+        ## #'
+        ## #' @details The algorithm passes through the cells in the DEM in increasing height. Three measures of flow length to the channel are computed. The shortest length (minimum length to channel through any flow path), the dominant length (the length taking the flow direction with the highest fraction for each pixel on the path) and expected flow length (flow length based on sum of downslope flow lengths based on fraction of flow to each cell). By definition cells in the channel that have no land area have a length of NA.
+        ## compute_flow_lengths = function(flow_routing=c("expected","dominant","shortest"), verbose=FALSE){
+        ##     flow_routing = match.arg(flow_routing)
+        ##     private$apply_flow_lengths(flow_routing,verbose)
+        ##     invisible(self)
+        ## },
         #' @description Create a catchment classification based cutting an existing layer into classes
         #' @param layer_name name of the new layer to create
         #' @param base_layer name of the layer to be cut into classes
@@ -203,8 +204,8 @@ dynatopGIS <- R6::R6Class(
         #'
         #' @details This applies the given cuts to the supplied landscape layer to produce areal groupings of the catchment. Cuts are implement using \code{terra::cut} with \code{include.lowest = TRUE}. Note that is specifying a vector of cuts values outside the limits will be set to NA.
         classify = function(layer_name,base_layer,cuts){
-            private$apply_classify(as.character(layer_name), as.character(base_layer), cuts)
-            invisible(self)
+            private$apply_classify(as.character(base_layer[1]), cuts, as.character(layer_name[1]))
+            ##invisible(self)
         },
         #' @description Combine any number of classifications based on unique combinations and burns
         #' @param layer_name name of the new layer to create
@@ -213,10 +214,9 @@ dynatopGIS <- R6::R6Class(
         #'
         #' @details This applies the given cuts to the supplied landscape layers to produce areal groupings of the catchment. Burns are added directly in the order they are given. Cuts are implement using \code{terra::cut} with \code{include.lowest = TRUE}. Note that is specifying a vector of cuts values outside the limits will be set to NA.
         combine_classes = function(layer_name,pairs,burns=NULL){
-            private$apply_combine_classes(as.character(layer_name),
+            private$apply_combine_classes(as.character(layer_name[1]),
                                           as.character(pairs),
                                           as.character(burns))
-            invisible(self)
         },
         #' @description Compute a Dynamic TOPMODEL
         #'
@@ -257,21 +257,21 @@ dynatopGIS <- R6::R6Class(
         #' @details the version number indicates the version of the algorithms within the object
         get_version = function(){
             private$version
-        },
-        #' @description get the cuts and burns used to classify
-        #' @param layer_name the name of layer whose classification method is returned
-        #' @return a list with two elements, cuts and burns
-        get_method = function(layer_name){
-            ## check layer name exists
-            layer_name <- match.arg(layer_name,names(private$brk))
-
-            jsonFile <- paste0(tools::file_path_sans_ext(terra::sources(private$brk[[layer_name]])),".json")
-            if( !file.exists(jsonFile) ){
-                stop("No json file giving basis of the classifications")
-            }
-
-            return( jsonlite::fromJSON( jsonFile ) )
         }
+        ## #' @description get the cuts and burns used to classify
+        ## #' @param layer_name the name of layer whose classification method is returned
+        ## #' @return a list with two elements, cuts and burns
+        ## get_method = function(layer_name){
+        ##     ## check layer name exists
+        ##     layer_name <- match.arg(layer_name,names(private$brk))
+
+        ##     jsonFile <- paste0(tools::file_path_sans_ext(terra::sources(private$brk[[layer_name]])),".json")
+        ##     if( !file.exists(jsonFile) ){
+        ##         stop("No json file giving basis of the classifications")
+        ##     }
+
+        ##     return( jsonlite::fromJSON( jsonFile ) )
+        ## }
     ),
     private = list(
         version = "0.3.5",
@@ -281,11 +281,26 @@ dynatopGIS <- R6::R6Class(
         reserved_layers = c("catchment","dem","channel","filled_dem",
                             "gradient","upslope_area","atb",
                             "band"),
+        ## save and reload changes
+        save_project = function(chn=FALSE){
+            tmpFile <- paste0(private$projectFile,".tmp")
+            terra::writeRaster(private$brk,tmpFile, filetype="Gtiff",overwrite=TRUE)
+            file.copy(tmpFile,private$projectFile,overwrite=TRUE)
+            private$brk <- terra::rast( private$projectFile )
+
+            if(chn){
+                channelFile <- paste0(tools::file_path_sans_ext(private$projectFile),".geojson")
+                tmpFile <- paste0(channelFile,".tmp")
+                terra::writeVector(private$chn,tmpFile,filetype="GeoJSON",overwrite=TRUE)
+                file.copy(tmpFile,channelFile,overwrite=TRUE)
+                private$chn <- terra::vect(channelFile)
+            }
+        },
         ## check and read the project files
         apply_initialize = function(projectFile){
             ## check extension
             fileType <- tools::file_ext(projectFile)
-            stopifnot( "Incorrect file extension" = fileType != "tif" )
+            stopifnot( "Incorrect file extension" = fileType == "tif" )
 
             ## see if file exists
             if( !file.exists(projectFile) ){
@@ -299,7 +314,7 @@ dynatopGIS <- R6::R6Class(
             brk <- terra::rast( projectFile )
 
             ## work out the channel file location
-            channelFile <- paste0(tools::file_path_sans_ext(projectFile),".shp")
+            channelFile <- paste0(tools::file_path_sans_ext(projectFile),".geojson")
             chn <- NULL
 
             ## initial error checks
@@ -338,7 +353,7 @@ dynatopGIS <- R6::R6Class(
 
             stopifnot(
                 "The catchment map already exists, start a new project" = !("catchment" %in% names(private$brk)),
-                "The catchment must be one layer" = terra::nlayers(catchment)==1,
+                "The catchment must be one layer" = terra::nlyr(catchment)==1,
                 "Processing currently only works on projected maps with a square grid" = isProjected,
                 "Catchment must be padded with NA rows and columns" = isPadded
             )
@@ -346,8 +361,7 @@ dynatopGIS <- R6::R6Class(
             ## save
             names(catchment) <- "catchment"
             private$brk <- catchment
-            terra::writeRaster(private$brk, private$projectFile)
-            private$brk <- terra::rast( private$projectFile )
+            private$save_project()
         },
         ## adding dem
         apply_add_dem = function(dem,fill_na){
@@ -358,7 +372,7 @@ dynatopGIS <- R6::R6Class(
                 "The DEM already exists" = !("dem" %in% names(private$brk)),
                 "New layer does not match resolution, extent or projection of project" =
                     terra::compareGeom(dem,private$brk,stopOnError=FALSE),
-                "The dem must be one layer" = terra::nlayers(dem)==1,
+                "The dem must be one layer" = terra::nlyr(dem)==1
             )
 
             if( terra::global(is.na(dem) & !is.na(private$brk[["catchment"]]),max)>0 ){
@@ -371,12 +385,11 @@ dynatopGIS <- R6::R6Class(
 
             ## save
             private$brk <- c(private$brk,dem)
-            terra::writeRaster(private$brk, private$projectFile)
-            private$brk <- terra::rast( private$projectFile )
+            private$save_project()
         },
         ## add the channel
         apply_add_channel = function(chn,verbose){
-
+            
             rq <- c("catchment")
             chn_variables <- c(
                 "name" = "character",
@@ -389,7 +402,7 @@ dynatopGIS <- R6::R6Class(
 
             stopifnot(
                 "Not all required layers are available" = all(rq %in% names(private$brk)),
-                "Channel already added" = !is.null(private$chn),
+                "Channel already added" = is.null(private$chn),
                 "A required property name is not specified" = all(names(chn_variables) %in% names(chn)),
                 "Projection of channel object does not match that of project" =
                      terra::crs(private$brk, proj=TRUE) == terra::crs(chn, proj=TRUE)
@@ -402,7 +415,7 @@ dynatopGIS <- R6::R6Class(
 
             ## ensure required properties are of correct type
             for(ii in names(chn_variables)){
-                chn[[ii]] <- as(chn[[ii]],chn_variables[ii])
+                chn[[ii]][[ii]] <- as(chn[[ii]][[ii]],chn_variables[ii])
             }
             stopifnot(
                 "Some non-finite values of length found!" = all(is.finite(chn$length)),
@@ -451,17 +464,16 @@ dynatopGIS <- R6::R6Class(
             names(chn_rst) <- "channel"
 
             ## save output
-            channelFile <- paste0(tools::file_path_sans_ext(projectFile),".shp")
             private$brk <- c(private$brk,chn_rst)
-            terra::writeRaster(private$brk, private$projectFile)
-            private$brk <- terra::rast( private$projectFile )
-            terra::writeVector(chn,channelFile)
-            private$chn <- terra::vect(channelFile)
+            private$chn <- chn
+            private$save_project(chn=TRUE)
         },
         ## Add a layer
         apply_add_layer=function(layer,layer_name){
 
+            rq <- c("channel","catchment")
             stopifnot(
+                "Missing required layers" = all(rq %in% names(private$brk)),
                 "Name is reserved" = !any(layer_name %in% private$reserved_layers),
                 "Name is already used" = !any(layer_name %in% names(private$brk)),
                 "New layer does not match resolution, extent or projection of project" =
@@ -475,15 +487,16 @@ dynatopGIS <- R6::R6Class(
             ## check for no NA values
             ## TODO check how global works on a stack, do we just need to call once...
             for(ii in names(layer)){
-                if( terra::global(is.na(layer[[ii]]) & !is.na(private$brk[["catchment"]]),max)>0 ){
+                if( terra::global( is.na(layer[[ii]]) &
+                                   !is.na(private$brk[["catchment"]]) &
+                                   is.na(private$brk[["channel"]]) ,max)>0 ){
                     stop(paste("Layer",ii,"has missing values in the catchment - try running fill_na first"))
                 }
             }
 
             ## save output
             private$brk <- c(private$brk,layer)
-            terra::writeRaster(private$brk, private$projectFile)
-            private$brk <- terra::rast( private$projectFile )
+            private$save_project()
         },
         ## Sink fill
         apply_sink_fill = function(min_grad,max_it,verbose,hot_start,flow_type){
@@ -594,9 +607,8 @@ dynatopGIS <- R6::R6Class(
                 private$brk <- c( private$brk, rfd )
             }
 
-            terra::writeRaster(private$brk, private$projectFile)
-            private$brk <- terra::rast( private$projectFile )
-
+            private$save_project()
+            
             if(it>max_it){ stop("Maximum number of iterations reached, sink filling not complete") }
 
         },
@@ -604,14 +616,15 @@ dynatopGIS <- R6::R6Class(
         ## if we go up in height order then we are working from near the channel to the heighest point
         ## could add back in flow distances here
         apply_upward_pass = function(verbose){
-            rq <- c("filled_dem","channel","catchment")
+            
+            rq <- c("filled_dem","channel")
             stopifnot(
                 "Not all required input layers have been generated \n Try running sink_fill first" =
                     all( rq %in% names( private$brk) )
             )
 
-             ## rasterize channel band to start
-            rbnd <- terra::rasterize(private$shp, private$brk[["catchment"]],field = "band",touches=TRUE)
+            ## rasterize channel band to start
+            rbnd <- terra::rasterize(private$chn, private$brk[["catchment"]],field = "band",touches=TRUE)
             names(rbnd) <- "band"
 
             ## load raster layer
@@ -639,7 +652,7 @@ dynatopGIS <- R6::R6Class(
                 jdx <- ii+delta
                 dz[] <- d[ii] - d[jdx]
                 is_lower <- is.finite(dz) & dz>0
-                bnd[ii] <- max( bnd[jdx[w>0]] ) + 1
+                bnd[ii] <- max( bnd[jdx[is_lower]] ) + 1
 
                 if(verbose){
                     print_step[1] <- print_step[1] + 1
@@ -654,16 +667,14 @@ dynatopGIS <- R6::R6Class(
 
             ## save
             terra::values(rbnd) <- bnd
-            private$brk <- c(private$brk,bnd)
-
-            terra::writeRaster(private$brk, private$projectFile)
-            private$brk <- terra::rast( private$projectFile )
+            private$brk <- c(private$brk,rbnd)
+            private$save_project()
 
         },
         apply_downward_pass = function(min_grad,verbose){
 
             if( verbose ){ print("Loading data for downward pass") }
-
+            rq <- c("filled_dem","channel")
             stopifnot(
                 "Not all required input layers have been generated \n Try running sink_fill first" =
                     all( rq %in% names( private$brk) )
@@ -718,7 +729,7 @@ dynatopGIS <- R6::R6Class(
                 ## topographic index
                 atb[ii] <- log(upa[ii]/gr[ii]) #log( upa[ii] / sum(gcl) )
                 ## propogate area downslope
-                upa[ ngh ]  <- upa[ ngh ] + w*upa[ii]
+                upa[ jdx ]  <- upa[ jdx ] + w*upa[ii]
 
                 ## verbose output here
                 if(verbose){
@@ -758,16 +769,13 @@ dynatopGIS <- R6::R6Class(
             private$chn$upstream_area <- uA
 
             ## save output
-            channelFile <- paste0(tools::file_path_sans_ext(projectFile),".shp")
             private$brk <- c(private$brk,
                              terra::rast( private$brk[["dem"]], names="gradient", vals=gr ),
                              terra::rast( private$brk[["dem"]], names="upslope_area", vals=upa ),
                              terra::rast( private$brk[["dem"]], names="atb", vals=atb )
                              )
-            terra::writeRaster(private$brk, private$projectFile)
-            private$brk <- terra::rast( private$projectFile )
-            terra::writeVector(private$chn,channelFile)
-            private$chn <- terra::vect(channelFile)
+
+            private$save_project(chn=TRUE)
         },
 
         ## ## Function to compute the bands
@@ -1073,9 +1081,11 @@ dynatopGIS <- R6::R6Class(
         ## split_to_class
         apply_classify = function(base_layer,cuts,layer_name){
 
+            rq <- c("channel",base_layer)
             stopifnot(
-                "Missing base layer to classify" = base_layer %in% names(private$brk),
-                "layer_name is already used" = is.null(layer_name) | !(layer_name %in% names(private$brk)),
+                "Missing channel or base layer to classify" = all( rq %in% names(private$brk) ),
+                "layer_name has zero length" = nchar(layer_name)>0,
+                "layer_name is already used" = !(layer_name %in% names(private$brk)),
                 "layer_name is reserved" = !(layer_name %in% names(private$reserved_layers))
             )
 
@@ -1084,41 +1094,49 @@ dynatopGIS <- R6::R6Class(
 
             ## work out breaks
             brk <- as.numeric(cuts)
+            rng <- as.numeric( terra::global(x, fun="range",na.rm=TRUE) )
             if( length(brk)==1 ){
                 ## this defines brks in the same way as cut would otherwise
-                rng <- as.numeric( terra::global(x, fun="range",na.rm=TRUE) )
                 brk <- seq(rng[1],rng[2],length=brk+1)
+            }else{
+                brk <- sort(brk)
+                if( brk[1] > rng[1]){ brk <- c(rng[1],brk) }
+                if( tail(brk,1) < rng[2]){ brk <- c(brk,rng[2]) }
             }
             if( any(is.na(brk)) ){ stop("NA value in brk") }
-
+            M <- cbind( head(brk,-1), tail(brk,-1), 1:(length(brk)-1) )
+            
             ## cut the raster and save
 
-            return( terra::classify(x,rcl=brk,include.lowest=TRUE,names=layer_name) )
+            return( terra::classify(x,rcl=M,include.lowest=TRUE,names=layer_name) )
         },
         ## split_to_class
         apply_combine_classes = function(layer_name,pairs,burns){
-
+            
             stopifnot(
                 "Missing layers in pairs list" = all(pairs %in% names(private$brk)),
-                "Missing layers in bruns list" = all(burns %in% names(private$brk))
+                "Missing layers in burns list" = all(burns %in% names(private$brk)),
+                "There must be at lest one entry in pairs" = length(pairs)>0
             )
 
-            x <- as.matrix( private$brk[ pairs ] )
+            x <- terra::as.matrix( private$brk[[ pairs ]] )
             idx <- rowSums(is.finite(x)) == ncol(x) ## thses are the valid cells
-            xstr <- apply(x,2,function(r){paste(r,sep="_")})
-
+            xstr <- apply(x,1,function(r){paste(r,collapse="_")})
+                            
             ## add burns sequentally
-            y <- as.matrix( private$brk[ burns ] )
-            for(ii in 1:ncol(y)){
-                jdx <- is.finite(y[,ii])
-                xstr[jdx] <- paste("burn",ii,y[jdx,ii],sep="_")
+            if(length(burns)>0){
+                y <- terra::as.matrix( private$brk[[ burns ]] )
+                for(ii in 1:ncol(y)){
+                    jdx <- is.finite(y[,ii])
+                    xstr[jdx] <- paste("burn",ii,y[jdx,ii],sep="_")
+                }
             }
 
             ## make numeric class
-            uxstr <- unqiue(xstr[idx])
+            uxstr <- unique(xstr[idx])
             ux <- setNames(1:length(uxstr),uxstr)
             z <- rep(NA,nrow(x))
-            z[idx] <- ux[uxstr[idx]]
+            z[idx] <- ux[xstr[idx]]
 
             return( terra::rast( private$brk[["dem"]], names=layer_name, vals=z ) )
 
@@ -1189,6 +1207,7 @@ dynatopGIS <- R6::R6Class(
                                       layer_name,verbose,
                                       sf_opt,
                                       sz_opt){
+            
             ## check layers
             rq <- c("dem","channel",
                     "band",class_lyr,
@@ -1202,19 +1221,22 @@ dynatopGIS <- R6::R6Class(
             dxy <- rep(sqrt(sum(rs^2)),8)
             dxy[c(2,7)] <- rs[1]; dxy[c(4,5)] <- rs[2]
             dcl <- c(0.35,0.5,0.35,0.5,0.5,0.35,0.5,0.35)*mean(rs) ## assumes square
-            nr <- nrow(private$brk)
+            nr <- terra::ncol(private$brk) ##ra::nrow(private$brk)
             delta <- c(-nr-1,-nr,-nr+1,-1,1,nr-1,nr,nr+1)
             cell_area <- prod(rs)
             n_channel <- nrow(private$chn)
 
             ## make the HRU map
-            hru_map <- as.matrix(private$brk$channel)
-            hru_info <- as.matrix(private$brk[ c("band",class_lyr) ])
-            cls <- apply(tmp,2,function(xx){paste(xx,sep="_")})
-            cls[is.finite(tmp[,1])] <- NA
-            ucls <- unqiue(cls)
+            hru_map <- terra::as.matrix(private$brk$channel) #,wide=TRUE)
+            band <- terra::as.matrix(private$brk$band,wide=TRUE)
+            ## to make the following sq need to fill by row
+            hru_info <- terra::as.matrix(private$brk[[ c("band",class_lyr) ]]) ## to make wide this need to 
+            cls <- apply(hru_info,1,function(xx){paste(xx,collapse="_")})
+            cls[!is.finite(hru_info[,1])] <- NA
+            cls[is.finite(hru_map)] <- NA
+            ucls <- unique(cls)
             tmp <- sapply(strsplit(ucls,"_"),function(x){as.integer(x[1])}) ## band of unqiue class
-            ucls <- ucls[order(tmp)] ## order the unique classes
+            ucls <- ucls[order(tmp,na.last=NA)] ## order the unique classes
             ucls <- setNames( n_channel + (1:length(ucls)), ucls ) ## numbers of unique class
             idx <- is.na(hru_map) & !is.na(cls)
             hru_map[idx] <- ucls[ cls[idx] ]
@@ -1262,18 +1284,19 @@ dynatopGIS <- R6::R6Class(
 
             ## initalise the hrus
             if(verbose){ cat("Initialise the HRUs","\n") }
-            hru <- rep(list(tmplate), n_hru)
+            hru <- rep(list(tmplate), max(hru_map,na.rm=TRUE)) ##n_hru)
 
             ## handle precip and pet inputs
-            if(rain_layer){
-                cell_precip <- paste0(rainfall_label,as.matrix(private$brk[[rain_lyr]]))
+            if(!is.null(rain_lyr)){
+                cell_precip <- paste0(rainfall_label,terra::as.matrix(private$brk[[rain_lyr]]))
             }
-            if(pet_layer){
-                cell_pet <- paste0(pet_label,as.matrix(private$brk[[pet_lyr]]))
+            if(!is.null(pet_lyr)){
+                cell_pet <- paste0(pet_label,terra::as.matrix(private$brk[[pet_lyr]]))
             }
 
             ## pass over all the cells to get flow directions areas etc
-            d <- as.matrix( private$brk$dem, wide=TRUE )
+            if(verbose){ cat("Pass over all cells","\n") }
+            d <- terra::as.matrix( private$brk$filled_dem) #, wide=T )
             w <- rep(0,8)
             for(ii in which(is.finite(hru_map))){
                 id <- hru_map[ii]
@@ -1307,7 +1330,7 @@ dynatopGIS <- R6::R6Class(
                 stopifnot(
                     "All hillslope cells must flow to those with lower id's" = all( id>hru_map[kk] ),
                     "All hillslope cells must flow to those with bands" =
-                        all( hru_info[id,"band"] > hru_info[kk,"band"] ),
+                        all( hru_info[ii,"band"] > hru_info[kk,"band"] ),
                     "Hillslopes must drain down" = length(kk)>0
                 )
 
@@ -1338,13 +1361,13 @@ dynatopGIS <- R6::R6Class(
 
             if( verbose ){ cat("Passing over HRUs to finalise","\n") }
             for(ii in 1:length(hru)){
-                if( ii <= nchannel){
+                if( ii <= n_channel){
                     ## it is a channel HRU
                     hru[[ii]]$id <- as.integer( shp$id[ii] )
                     hru[[ii]]$band <- as.integer( shp$band[ii] )
                     hru[[ii]]$properties["Dx"] <- as.numeric( shp$length[ii] )
                     hru[[ii]]$properties["gradient"] <- as.numeric( shp$slope[ii] )
-                    hru[[ii]]$class <- as.list( shp[ii,class_names] )
+                    hru[[ii]]$class <- as.list( shp[ii,chn_class_names] )
 
                     ## handle inputs if zero area
                     if( !is.null(rain_lyr) & hru[[ii]]$properties["area"]==0 ){
@@ -1355,7 +1378,7 @@ dynatopGIS <- R6::R6Class(
                     }
 
                     ## do downstream routing
-                    kk <- shp$id[ shp$startNode == Shp$endNode[ii] ]
+                    kk <- shp$id[ shp$startNode == shp$endNode[ii] ]
                     if(length(kk)>0){
                         ## has downstream
                         hru[[ii]]$sf_flow_direction <- setNames(rep(1/length(kk),length(kk)), paste(kk))
@@ -1369,15 +1392,16 @@ dynatopGIS <- R6::R6Class(
 
                 }else{
                     ## hillslope HRU
+                    ##browser()
                     if( length(hru[[ii]]$sf_flow_direction)==0 ){ stop("Hillslope HRU with no outflow") }
                     if( hru[[ii]]$properties["area"]==0 ){ stop("Hillslope HRU with no area") }
-                    hru[[ii]]$properties["gradient"] <- hru[[jj]]$properties["gradient"] / hru[[jj]]$properties["width"]
-                    hru[[ii]]$sf_flow_direction <- hru[[jj]]$sf_flow_direction / sum(hru[[jj]]$sf_flow_direction)
+                    hru[[ii]]$properties["gradient"] <- hru[[ii]]$properties["gradient"] / hru[[ii]]$properties["width"]
+                    hru[[ii]]$sf_flow_direction <- hru[[ii]]$sf_flow_direction / sum(hru[[ii]]$sf_flow_direction)
                 }
 
                 ## for both
                 hru[[ii]]$id <- as.integer(hru[[ii]]$id - 1) ## since 0 indexed in dynatop
-                hru[[jj]]$properties["area"] <- as.numeric( hru[[jj]]$properties["area"] * cell_area )
+                hru[[ii]]$properties["area"] <- as.numeric( hru[[ii]]$properties["area"] * cell_area )
                 hru[[ii]]$precip <- list(name = names(hru[[ii]]$precip),
                                          fraction = as.numeric( hru[[ii]]$precip / sum(hru[[ii]]$precip) ))
                 hru[[ii]]$pet <- list(name = names(hru[[ii]]$pet),
@@ -1386,8 +1410,12 @@ dynatopGIS <- R6::R6Class(
                     hru[[ii]]$sf_flow_direction <- list(
                         id = as.integer(names(hru[[ii]]$sf_flow_direction)) - 1, # since 0 indexed in dynatop
                         fraction = as.numeric( hru[[ii]]$sf_flow_direction ))
-                    hru[[ii]]$sz_flow_direction <- hru[[ii]]$sf_flow_direction
+                }else{
+                    hru[[ii]]$sf_flow_direction <- list(
+                        id = integer(0),
+                        fraction = numeric(0) )
                 }
+                hru[[ii]]$sz_flow_direction <- hru[[ii]]$sf_flow_direction
             }
             ## correct maps etc to 0 index
             hru_map[] <- as.integer(hru_map-1)
