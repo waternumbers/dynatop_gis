@@ -284,7 +284,7 @@ dynatopGIS <- R6::R6Class(
         ## save and reload changes
         save_project = function(chn=FALSE){
             tmpFile <- paste0(private$projectFile,".tmp")
-            terra::writeRaster(private$brk,tmpFile, filetype="Gtiff",overwrite=TRUE)
+            terra::writeRaster(private$brk,tmpFile, filetype="Gtiff",datatype="FLT8S",overwrite=TRUE)
             file.copy(tmpFile,private$projectFile,overwrite=TRUE)
             private$brk <- terra::rast( private$projectFile )
 
@@ -625,6 +625,7 @@ dynatopGIS <- R6::R6Class(
 
             ## rasterize channel band to start
             rbnd <- terra::rasterize(private$chn, private$brk[["catchment"]],field = "band",touches=TRUE)
+            rbnd <- terra::mask(rbnd,private$brk$catchment) ## ensure channel bands are within the catchment - else later code fails
             names(rbnd) <- "band"
 
             ## load raster layer
@@ -763,7 +764,7 @@ dynatopGIS <- R6::R6Class(
             }
             stopifnot(
                 "All channel upstream areas should be finite" = all(is.finite(uA)),
-                "All channel upstream areas should be positive" = all(uA>0)
+                "All channel upstream areas should be non-negative" = all(uA>=0) ## TODO - make this strict with an options to disable
             )
 
             private$chn$upstream_area <- uA
@@ -1228,9 +1229,8 @@ dynatopGIS <- R6::R6Class(
 
             ## make the HRU map
             hru_map <- terra::as.matrix(private$brk$channel) #,wide=TRUE)
-            band <- terra::as.matrix(private$brk$band,wide=TRUE)
             ## to make the following sq need to fill by row
-            hru_info <- terra::as.matrix(private$brk[[ c("band",class_lyr) ]]) ## to make wide this need to
+            hru_info <- terra::as.matrix(private$brk[[ c("band",class_lyr) ]])
             cls <- apply(hru_info,1,function(xx){paste(xx,collapse="_")})
             cls[!is.finite(hru_info[,1])] <- NA
             cls[is.finite(hru_map)] <- NA
@@ -1299,6 +1299,7 @@ dynatopGIS <- R6::R6Class(
             d <- terra::as.matrix( private$brk$filled_dem) #, wide=T )
             w <- rep(0,8)
             for(ii in which(is.finite(hru_map))){
+
                 id <- hru_map[ii]
                 hru[[id]]$properties["area"] <-  hru[[id]]$properties["area"] + 1
 
